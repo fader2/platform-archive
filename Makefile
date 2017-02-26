@@ -1,6 +1,8 @@
 
 test:
 	GOPATH=${PWD} go test -v \
+		-run= ./src/store/...
+#	GOPATH=${PWD} go test -v \
 		-run= ./src/fs/...
 .PHONY: test
 
