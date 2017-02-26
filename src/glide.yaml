@@ -3,6 +3,8 @@ package: .
 ignore:
 - fs
 - cmd
+- store
+- interfaces
 
 import:
 - package: gopkg.in/vmihailenco/msgpack.v2
