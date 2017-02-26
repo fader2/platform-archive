@@ -22,3 +22,10 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+/bin
+/bin/*
+/src/vendor
+*.lock
+.env
+_*
