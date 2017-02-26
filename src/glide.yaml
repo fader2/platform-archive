@@ -1,6 +1,12 @@
 package: .
 
+ignore:
+- fs
+- cmd
+
 import:
+- package: gopkg.in/vmihailenco/msgpack.v2
+- package: github.com/boltdb/bolt
 - package: github.com/satori/go.uuid
 - package: gopkg.in/fsnotify.v1
 - package: golang.org/x/sys/...
