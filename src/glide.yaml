@@ -5,14 +5,22 @@ ignore:
 - cmd
 - store
 - interfaces
+- config
+- fader
 
 import:
+- package: github.com/BurntSushi/toml
 - package: gopkg.in/vmihailenco/msgpack.v2
 - package: github.com/boltdb/bolt
 - package: github.com/satori/go.uuid
 - package: gopkg.in/fsnotify.v1
 - package: golang.org/x/sys/...
 - package: github.com/SentimensRG/sigctx
+- package: github.com/labstack/echo
+  version: v2.2.0
+  subpackages:
+  - engine/standard
+  - middleware
 testImport:
 - package: github.com/stretchr/testify
   subpackages:
