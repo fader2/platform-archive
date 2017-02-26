@@ -1,0 +1,11 @@
+package: .
+
+import:
+- package: github.com/satori/go.uuid
+- package: gopkg.in/fsnotify.v1
+- package: golang.org/x/sys/...
+- package: github.com/SentimensRG/sigctx
+testImport:
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
