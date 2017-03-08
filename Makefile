@@ -2,8 +2,10 @@
 test:
 	GOPATH=${PWD} go test -v \
 		-run= ./src/store/...
-#	GOPATH=${PWD} go test -v \
+	GOPATH=${PWD} go test -v \
 		-run= ./src/fs/...
+	GOPATH=${PWD} go test -v \
+		-run= ./src/test/...
 .PHONY: test
 
 run:
