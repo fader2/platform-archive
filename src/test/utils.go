@@ -1,6 +1,8 @@
 package test
 
 import (
+	//"github.com/boltdb/bolt"
+	"interfaces"
 	"io/ioutil"
 	"net/http"
 )
@@ -13,7 +15,7 @@ func DetectContentType(buffer []byte) string {
 	return contentType
 }
 
-func dirContent(dirname strign, onlyDirs bool) (names []string, err error) {
+func dirContent(dirname string, onlyDirs bool) (names []string, err error) {
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		return nil, err
@@ -21,17 +23,28 @@ func dirContent(dirname strign, onlyDirs bool) (names []string, err error) {
 
 	for _, fileInfo := range files {
 		if onlyDirs == fileInfo.IsDir() {
-			names := append(names, fileInfo.Name())
+			names = append(names, fileInfo.Name())
 		}
 	}
 
 	return
 }
 
-func dirDirs(dirname) ([]string, error) {
+func dirDirs(dirname string) ([]string, error) {
 	return dirContent(dirname, true)
 }
 
-func dirFiles(dirname) ([]string, error) {
+func dirFiles(dirname string) ([]string, error) {
 	return dirContent(dirname, false)
+}
+
+/* import */
+func HasFile(fileManager interfaces.FileManager, bucketName, fileName string) (bool, error) {
+	if _, err := fileManager.FindFileByName(bucketName, fileName, interfaces.FullFile); err == nil {
+		return true, nil
+	} else if err == interfaces.ErrNotFound {
+		return false, nil
+	} else {
+		return false, err
+	}
 }
