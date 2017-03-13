@@ -51,7 +51,7 @@ func TestImportNewFile(t *testing.T) {
 	_, e = f.WriteString("testdata")
 	assert.Nil(t, e)
 
-	e = ImportFsFile(testDb, DefaultWorkSpaceName, "ex1", "testFile", "testFile")
+	e = ImportFsDataFile(testDb, DefaultWorkSpaceName, "ex1", "testFile", "testFile")
 	assert.Nil(t, e, eToStr(e))
 
 	fm := boltStore.NewFileManager(testDb)
@@ -91,7 +91,7 @@ func TestImportExistingFile(t *testing.T) {
 	_, e = f.WriteString("testdata")
 	assert.Nil(t, e)
 
-	e = ImportFsFile(testDb, DefaultWorkSpaceName, "ex1", fileName, fileName)
+	e = ImportFsDataFile(testDb, DefaultWorkSpaceName, "ex1", fileName, fileName)
 	assert.Nil(t, e, eToStr(e))
 
 	fm := boltStore.NewFileManager(testDb)

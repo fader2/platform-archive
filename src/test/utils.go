@@ -1,6 +1,8 @@
 package test
 
 import (
+	"encoding/json"
+	"fmt"
 	//"github.com/boltdb/bolt"
 	"interfaces"
 	"io/ioutil"
@@ -46,5 +48,42 @@ func HasFile(fileManager interfaces.FileManager, bucketName, fileName string) (b
 		return false, nil
 	} else {
 		return false, err
+	}
+}
+
+func setDataToFile(file *interfaces.File, used interfaces.DataUsed, data []byte) (err error) {
+	switch used {
+	case interfaces.LuaScript:
+		file.LuaScript = data
+	case interfaces.MetaData:
+		m := map[string]interface{}{}
+		err = json.Unmarshal(data, &m)
+		file.MetaData = m
+	case interfaces.StructuralData:
+		m := map[string]interface{}{}
+		err = json.Unmarshal(data, &m)
+		file.StructuralData = m
+	case interfaces.RawData:
+		file.RawData = data
+	default:
+		return fmt.Errorf("Err used")
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func detectUsedType(dataName string) interfaces.DataUsed {
+	switch dataName {
+	case "script.lua":
+		return interfaces.LuaScript
+	case "meta.json":
+		return interfaces.MetaData
+	case "structural_data.json":
+		return interfaces.StructuralData
+	default:
+		return interfaces.RawData
 	}
 }
