@@ -1,11 +1,13 @@
 
 test:
 	GOPATH=${PWD} go test -v \
-		-run= ./src/store/...
-	GOPATH=${PWD} go test -v \
 		-run= ./src/fs/...
 	GOPATH=${PWD} go test -v \
 		-run= ./src/test/...
+	GOPATH=${PWD} go test -v \
+		-run= ./src/store/...
+
+
 .PHONY: test
 
 run:
