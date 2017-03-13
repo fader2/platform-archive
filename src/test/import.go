@@ -1,11 +1,13 @@
 package test
 
 import (
+	"archive/zip"
 	"bytes"
 	"github.com/boltdb/bolt"
 	"interfaces"
 	"io"
 	"io/ioutil"
+	"strings"
 	//"log"
 	"os"
 	"path/filepath"
@@ -36,6 +38,65 @@ func ImportWorkspace(db *bolt.DB, workspaceRoot string) error {
 		}
 	}
 	return nil
+}
+
+func ImportWorkspaceZip(db *bolt.DB, workspaceRoot string) error {
+
+	var (
+		buffer *bytes.Buffer = pool.Get().(*bytes.Buffer)
+
+		buckets = make(map[string]*interfaces.Bucket)
+	)
+
+	r, err := zip.OpenReader(workspaceRoot)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		r.Close()
+		pool.Put(buffer)
+	}()
+
+	for _, f := range r.File {
+		buffer.Reset()
+
+		arr := strings.SplitN(f.Name, os.PathSeparator, 3)
+		if len(arr) != 3 {
+			fmt.Printf("Skip file %s:\n", f.Name)
+			continue
+		}
+
+		var (
+			bucketName string = arr[0]
+			fileName   string = arr[1]
+			dataName   string = arr[2]
+		)
+
+		// todo. create other way to kreatin buckets
+		if bucket, ok := buckets[bucketName]; !ok {
+			bucket, err = createOrGetBucket(db, bucketName)
+			if err != nil {
+				return err
+			}
+			buckets[bucket.BucketName] = bucket
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(buffer, rc)
+		if err != nil {
+			return err
+		}
+		rc.Close()
+
+		err = importFsDataFileData(db, bucketName, fileName, dataName, buffer.Bytes())
+		if err != nil {
+			return err
+		}
+	}
 }
 
 func ImportBucket(db *bolt.DB, workspaceRoot, bucketName string) (err error) {
@@ -131,23 +192,13 @@ func ImportFsVirtualFile(db *bolt.DB, workspaceRoot, bucketName, fileName string
 
 func ImportFsDataFile(db *bolt.DB, workspaceRoot, bucketName, fileName, dataName string) (err error) {
 
-	mu.Lock()
-
 	var (
-		fileManager   = boltStore.NewFileManager(db)
-		bucketManager = boltStore.NewBucketManager(db)
-
 		filePath = filepath.Join(workspaceRoot, bucketName, fileName, dataName)
-		has      bool
-		used     interfaces.DataUsed
-		file     *interfaces.File
-		bucket   *interfaces.Bucket
 
 		buffer *bytes.Buffer = pool.Get().(*bytes.Buffer)
 	)
 
 	defer func() {
-		mu.Unlock()
 		pool.Put(buffer)
 	}()
 
@@ -174,6 +225,28 @@ func ImportFsDataFile(db *bolt.DB, workspaceRoot, bucketName, fileName, dataName
 		}
 	}
 
+	return importFsDataFileData(db, bucketName, fileName, dataName, buffer.Bytes())
+}
+
+func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, data []byte) (err error) {
+
+	mu.Lock()
+
+	var (
+		fileManager   = boltStore.NewFileManager(db)
+		bucketManager = boltStore.NewBucketManager(db)
+
+		filePath = filepath.Join(workspaceRoot, bucketName, fileName, dataName)
+		has      bool
+		used     interfaces.DataUsed
+		file     *interfaces.File
+		bucket   *interfaces.Bucket
+	)
+
+	defer func() {
+		mu.Unlock()
+	}()
+
 	if file, err = fileManager.FindFileByName(bucketName, fileName, interfaces.FullFile); err != nil && err != interfaces.ErrNotFound {
 		return
 	} else if err == interfaces.ErrNotFound {
@@ -193,7 +266,7 @@ func ImportFsDataFile(db *bolt.DB, workspaceRoot, bucketName, fileName, dataName
 	// detect content type
 	{
 		used = detectUsedType(dataName)
-		err = setDataToFile(file, used, buffer.Bytes())
+		err = setDataToFile(file, used, data)
 		if err != nil {
 			return err
 		}
@@ -217,7 +290,6 @@ func ImportFsDataFile(db *bolt.DB, workspaceRoot, bucketName, fileName, dataName
 
 	return nil
 }
-
 func createOrGetBucket(db *bolt.DB, bucketName string) (bucket *interfaces.Bucket, isNew bool, err error) {
 	var (
 		bucketManager = boltStore.NewBucketManager(db)
