@@ -3,6 +3,7 @@ package test
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"github.com/boltdb/bolt"
 	"interfaces"
 	"io"
@@ -61,7 +62,7 @@ func ImportWorkspaceZip(db *bolt.DB, workspaceRoot string) error {
 	for _, f := range r.File {
 		buffer.Reset()
 
-		arr := strings.SplitN(f.Name, os.PathSeparator, 3)
+		arr := strings.SplitN(f.Name, string(os.PathSeparator), 3)
 		if len(arr) != 3 {
 			fmt.Printf("Skip file %s:\n", f.Name)
 			continue
@@ -75,7 +76,7 @@ func ImportWorkspaceZip(db *bolt.DB, workspaceRoot string) error {
 
 		// todo. create other way to kreatin buckets
 		if bucket, ok := buckets[bucketName]; !ok {
-			bucket, err = createOrGetBucket(db, bucketName)
+			bucket, _, err = createOrGetBucket(db, bucketName)
 			if err != nil {
 				return err
 			}
@@ -97,6 +98,7 @@ func ImportWorkspaceZip(db *bolt.DB, workspaceRoot string) error {
 			return err
 		}
 	}
+	return nil
 }
 
 func ImportBucket(db *bolt.DB, workspaceRoot, bucketName string) (err error) {
@@ -236,11 +238,10 @@ func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, da
 		fileManager   = boltStore.NewFileManager(db)
 		bucketManager = boltStore.NewBucketManager(db)
 
-		filePath = filepath.Join(workspaceRoot, bucketName, fileName, dataName)
-		has      bool
-		used     interfaces.DataUsed
-		file     *interfaces.File
-		bucket   *interfaces.Bucket
+		has    bool
+		used   interfaces.DataUsed
+		file   *interfaces.File
+		bucket *interfaces.Bucket
 	)
 
 	defer func() {
