@@ -5,6 +5,7 @@ package fs
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -63,7 +64,7 @@ func NewFSWatcher() *FSWatcher {
 
 func NewFSWatcherWithHook(hook Hook) *FSWatcher {
 	return &FSWatcher{
-		logger: log.New(os.Stderr, "[WATCHER] ", log.Ldate|log.Lmicroseconds),
+		errors: make(chan error, 5),
 		hook:   hook,
 	}
 }
@@ -73,7 +74,7 @@ type FSWatcher struct {
 	lastEventTime time.Time
 	pool          chan fsnotify.Event
 	watcher       *fsnotify.Watcher
-	logger        *log.Logger
+	errors        chan error
 	hook          Hook
 }
 
@@ -100,36 +101,27 @@ func (w FSWatcher) Run(
 		}
 	}
 
-	w.logger.Println("SETUP")
-
 	// root path
 	w.watcher.Add(rootPath)
 
 	filepath.Walk(rootPath, func(path string, f os.FileInfo, err error) error {
 		if f.IsDir() {
 			w.watcher.Add(path)
-		} else {
-			w.logger.Println("\t +", path)
 		}
-
 		return nil
 	})
 
 	go func() {
-		w.logger.Println("START")
-
 		for {
 			select {
 			case event := <-w.watcher.Events:
 				go w.notify(event)
 			case err := <-w.watcher.Errors:
-				w.logger.Println("error:", err)
+				w.errors <- err
 			case <-ctx.Done():
 				return
 			}
 		}
-
-		w.logger.Println("END")
 	}()
 
 	return
@@ -212,7 +204,7 @@ func (w *FSWatcher) notify(event fsnotify.Event) {
 						oldFolder = events[0].Name
 						newFolder = events[1].Name
 					} else {
-						w.logger.Println("not expected order of events")
+						w.errors <- fmt.Errorf("not expected order of events")
 						return
 					}
 					go w.hook(RenameFolder, newFolder, oldFolder)
@@ -237,7 +229,7 @@ func (w *FSWatcher) notify(event fsnotify.Event) {
 						oldFile = events[0].Name
 						newFile = events[1].Name
 					} else {
-						w.logger.Println("not expected order of events")
+						w.errors <- fmt.Errorf("not expected order of events")
 						return
 					}
 					go w.hook(RenameFile, newFile, oldFile)
@@ -253,7 +245,7 @@ func (w *FSWatcher) notify(event fsnotify.Event) {
 					name := events[0].Name
 					fi, err := os.Stat(name)
 					if err != nil {
-						w.logger.Println("error open file", name, err)
+						w.errors <- fmt.Errorf("error open file %s (%s)", name, err)
 						return
 					}
 					if fi.IsDir() {
