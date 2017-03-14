@@ -233,10 +233,10 @@ func ImportFsDataFile(db *bolt.DB, workspaceRoot, bucketName, fileName, dataName
 func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, data []byte) (err error) {
 
 	mu.Lock()
+	defer mu.Unlock()
 
 	var (
-		fileManager   = boltStore.NewFileManager(db)
-		bucketManager = boltStore.NewBucketManager(db)
+		fileManager = boltStore.NewFileManager(db)
 
 		has    bool
 		used   interfaces.DataUsed
@@ -244,15 +244,11 @@ func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, da
 		bucket *interfaces.Bucket
 	)
 
-	defer func() {
-		mu.Unlock()
-	}()
-
 	if file, err = fileManager.FindFileByName(bucketName, fileName, interfaces.FullFile); err != nil && err != interfaces.ErrNotFound {
 		return
 	} else if err == interfaces.ErrNotFound {
 		has = false
-		bucket, err = bucketManager.FindBucketByName(bucketName, interfaces.FullBucket)
+		bucket, _, err = createOrGetBucket(db, bucketName)
 		if err != nil {
 			return err
 		}
@@ -284,9 +280,9 @@ func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, da
 		//file.ContentType = "text/plain"
 
 		err = fileManager.CreateFile(file)
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -306,6 +302,7 @@ func createOrGetBucket(db *bolt.DB, bucketName string) (bucket *interfaces.Bucke
 
 	isNew = true
 
+	bucket = interfaces.NewBucket()
 	bucket.BucketID = uuid.NewV4()
 	bucket.BucketName = bucketName
 
@@ -316,8 +313,7 @@ func createOrGetBucket(db *bolt.DB, bucketName string) (bucket *interfaces.Bucke
 func createOrGetFile(db *bolt.DB, bucketName, fileName string) (file *interfaces.File, isNew bool, err error) {
 
 	var (
-		fileManager   = boltStore.NewFileManager(db)
-		bucketManager = boltStore.NewBucketManager(db)
+		fileManager = boltStore.NewFileManager(db)
 
 		bucket *interfaces.Bucket
 	)
@@ -326,7 +322,7 @@ func createOrGetFile(db *bolt.DB, bucketName, fileName string) (file *interfaces
 		return
 	} else if err == interfaces.ErrNotFound {
 		isNew = true
-		bucket, err = bucketManager.FindBucketByName(bucketName, interfaces.FullBucket)
+		bucket, _, err = createOrGetBucket(db, bucketName)
 		if err != nil {
 			return
 		}
