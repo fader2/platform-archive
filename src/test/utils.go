@@ -57,11 +57,15 @@ func setDataToFile(file *interfaces.File, used interfaces.DataUsed, data []byte)
 		file.LuaScript = data
 	case interfaces.MetaData:
 		m := map[string]interface{}{}
-		err = json.Unmarshal(data, &m)
+		if len(data) > 0 {
+			err = json.Unmarshal(data, &m)
+		}
 		file.MetaData = m
 	case interfaces.StructuralData:
 		m := map[string]interface{}{}
-		err = json.Unmarshal(data, &m)
+		if len(data) > 0 {
+			err = json.Unmarshal(data, &m)
+		}
 		file.StructuralData = m
 	case interfaces.RawData:
 		file.RawData = data
@@ -77,11 +81,11 @@ func setDataToFile(file *interfaces.File, used interfaces.DataUsed, data []byte)
 
 func detectUsedType(dataName string) interfaces.DataUsed {
 	switch dataName {
-	case "script.lua":
+	case LuaScriptDataFileName:
 		return interfaces.LuaScript
-	case "meta.json":
+	case MetaDataFileName:
 		return interfaces.MetaData
-	case "structural_data.json":
+	case StructuralDataFileName:
 		return interfaces.StructuralData
 	default:
 		return interfaces.RawData

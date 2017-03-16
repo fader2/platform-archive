@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"interfaces"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	boltStore "store/boltdb"
@@ -203,6 +204,51 @@ func TestImportWorkspace(t *testing.T) {
 
 		assert.NoError(t, testFile(ifile, fileMeta.used, fileMeta.data), "file (%s) data test", filePath)
 	}
+}
+
+func TestImportFsDataFile(t *testing.T) {
+	initTestDb()
+	defer closeTestDb()
+
+	var (
+		bucketName = "еtestbucketname"
+		fileName   = "fileName"
+		//dataName   = "dataName"
+		data = []byte("data")
+
+		uses = []struct {
+			used interfaces.DataUsed
+			name string
+			data []byte
+		}{
+			{interfaces.MetaData, MetaDataFileName, []byte(`{"alo":"da"}`)},
+			{interfaces.StructuralData, StructuralDataFileName, []byte(`{"str":"str"}`)},
+			{interfaces.RawData, fileName, data},
+			{interfaces.LuaScript, LuaScriptDataFileName, []byte(`-- script`)},
+		}
+	)
+
+	fPath := filepath.Join(DefaultWorkSpaceName, bucketName, fileName)
+	err := os.MkdirAll(fPath, 0777)
+	assert.NoError(t, err, "mkdir for test workspace")
+	for _, v := range uses {
+		fP := filepath.Join(fPath, v.name)
+		err = ioutil.WriteFile(fP, v.data, FilesPermission)
+		assert.NoError(t, err, "write file (%s)", v.name)
+
+		err = ImportFsDataFile(testDb, DefaultWorkSpaceName, bucketName, fileName, v.name)
+		assert.NoError(t, err, "Import data file (%s)", v.name)
+
+		err = os.Remove(fP)
+		assert.NoError(t, err, "Remove data file (%s)", v.name)
+
+		err = ImportFsDataFile(testDb, DefaultWorkSpaceName, bucketName, fileName, v.name)
+		assert.NoError(t, err, "Import not existing file (%s)", v.name)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 }
 
 func TestImportFsDataFileData(t *testing.T) {

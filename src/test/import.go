@@ -133,7 +133,8 @@ func ImportFsVirtualFile(db *bolt.DB, workspaceRoot, bucketName, fileName string
 		fm   = boltStore.NewFileManager(db)
 		file *interfaces.File
 
-		buffer *bytes.Buffer = pool.Get().(*bytes.Buffer)
+		buffer   *bytes.Buffer = pool.Get().(*bytes.Buffer)
+		filePath               = filepath.Join(workspaceRoot, bucketName, fileName)
 	)
 
 	{
@@ -143,6 +144,16 @@ func ImportFsVirtualFile(db *bolt.DB, workspaceRoot, bucketName, fileName string
 		}()
 	}
 
+	files, err := ioutil.ReadDir(filePath)
+	if err != nil {
+		return
+	}
+	//todo ?? need delete file if it empty folder?
+	//if len(files) == 0 {
+	//	return deleteFileByName(db, bucketName, fileName)
+	//}
+
+	// ioutil.ReadDir(dirname)
 	if file, _, err = createOrGetFile(db, bucketName, fileName); err != nil {
 		return
 	}
@@ -157,11 +168,6 @@ func ImportFsVirtualFile(db *bolt.DB, workspaceRoot, bucketName, fileName string
 		file.StructuralData = make(map[string]interface{})
 	}
 
-	filePath := filepath.Join(workspaceRoot, bucketName, fileName)
-	files, err := ioutil.ReadDir(filePath)
-	if err != nil {
-		return
-	}
 	for _, dataFile := range files {
 		buffer.Reset()
 		f, err := os.OpenFile(filepath.Join(filePath, dataFile.Name()), os.O_RDONLY, FilesPermission)
@@ -195,9 +201,8 @@ func ImportFsVirtualFile(db *bolt.DB, workspaceRoot, bucketName, fileName string
 func ImportFsDataFile(db *bolt.DB, workspaceRoot, bucketName, fileName, dataName string) (err error) {
 
 	var (
-		filePath = filepath.Join(workspaceRoot, bucketName, fileName, dataName)
-
-		buffer *bytes.Buffer = pool.Get().(*bytes.Buffer)
+		filePath               = filepath.Join(workspaceRoot, bucketName, fileName, dataName)
+		buffer   *bytes.Buffer = pool.Get().(*bytes.Buffer)
 	)
 
 	defer func() {
@@ -211,19 +216,22 @@ func ImportFsDataFile(db *bolt.DB, workspaceRoot, bucketName, fileName, dataName
 
 		f, err := os.OpenFile(filePath, os.O_RDONLY, FilesPermission)
 		if err != nil {
-			return err
-		}
+			if !strings.HasSuffix(err.Error(), "no such file or directory") {
+				return err
+			}
+		} else {
 
-		// todo test file is no folder
+			// todo test file is no folder
 
-		// put data in buffer here
-		_, err = io.Copy(buffer, f)
-		if err != nil {
-			return err
-		}
-		err = f.Close()
-		if err != nil {
-			return err
+			// put data in buffer here
+			_, err = io.Copy(buffer, f)
+			if err != nil {
+				return err
+			}
+			err = f.Close()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -287,6 +295,7 @@ func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, da
 
 	return nil
 }
+
 func createOrGetBucket(db *bolt.DB, bucketName string) (bucket *interfaces.Bucket, isNew bool, err error) {
 	var (
 		bucketManager = boltStore.NewBucketManager(db)
@@ -340,4 +349,17 @@ func createOrGetFile(db *bolt.DB, bucketName, fileName string) (file *interfaces
 
 	err = fileManager.CreateFile(file)
 	return
+}
+
+func deleteFileByName(db *bolt.DB, bucketName, fileName string) error {
+	fileManager := boltStore.NewFileManager(db)
+	file, err := fileManager.FindFileByName(bucketName, fileName, 0)
+	if err != nil {
+		return err
+	}
+	err = fileManager.DeleteFile(file.FileID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

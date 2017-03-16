@@ -6,8 +6,13 @@ import (
 	"fs"
 	"github.com/boltdb/bolt"
 	"strings"
+	//boltStore "store/boltdb"
+)
 
-	boltStore "store/boltdb"
+const (
+	StructuralDataFileName = "structural_data.json"
+	MetaDataFileName       = "meta.json"
+	LuaScriptDataFileName  = "script.lua"
 )
 
 type Synchronizer struct {
@@ -73,12 +78,7 @@ func (s *Synchronizer) handleRemoveFile(name string) error {
 		fileName = arr[2]
 
 		// file deleted
-		fileManager := boltStore.NewFileManager(s.conn)
-		file, err := fileManager.FindFileByName(bucketName, fileName, 0)
-		if err != nil {
-			return err
-		}
-		err = fileManager.DeleteFile(file.FileID)
+		err := deleteFileByName(s.conn, bucketName, fileName)
 		if err != nil {
 			return err
 		}
