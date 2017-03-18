@@ -1,19 +1,17 @@
-package test
+package synchronizer
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/boltdb/bolt"
 	"interfaces"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	boltdbStore "store/boltdb"
 	"strings"
 )
 
 const (
-	DefaultWorkSpaceName = "./_workspace"
+	DefaultWorkSpaceName = "./FaderWorkspace"
 
 	LuaExt  = ".lua"
 	JSONExt = ".json"
@@ -22,7 +20,7 @@ const (
 )
 
 func Export(
-	db *bolt.DB,
+	db DbManager,
 	targetPath string) error {
 
 	if err := cleanWorkspace(targetPath); err != nil {
@@ -30,19 +28,16 @@ func Export(
 	}
 
 	var (
-		bucketManager = boltdbStore.NewBucketManager(db)
-		fileManager   = boltdbStore.NewFileManager(db)
-
 		buckets = map[string]*interfaces.Bucket{}
 
 		err error
 	)
 
-	if buckets, err = getBuckets(bucketManager); err != nil {
+	if buckets, err = getBuckets(db); err != nil {
 		return err
 	}
 
-	if err = fileManager.EachFile(makeExportFileFunc(fileManager, buckets, targetPath)); err != nil {
+	if err = db.EachFile(makeExportFileFunc(db, buckets, targetPath)); err != nil {
 		return err
 	}
 
@@ -66,7 +61,7 @@ func cleanWorkspace(fpath ...string) error {
 	return os.Mkdir(targetPath, FilesPermission)
 }
 
-func getBuckets(bm *boltdbStore.BucketManager) (map[string]*interfaces.Bucket, error) {
+func getBuckets(bm DbManager) (map[string]*interfaces.Bucket, error) {
 	var (
 		buckets = map[string]*interfaces.Bucket{}
 	)
@@ -82,7 +77,7 @@ func getBuckets(bm *boltdbStore.BucketManager) (map[string]*interfaces.Bucket, e
 	return buckets, err
 }
 
-func makeExportFileFunc(fileManager interfaces.FileManager, buckets map[string]*interfaces.Bucket, targetWorkspace string) func(*interfaces.File) error {
+func makeExportFileFunc(fileManager DbManager, buckets map[string]*interfaces.Bucket, targetWorkspace string) func(*interfaces.File) error {
 	return func(file *interfaces.File) error {
 		if file == nil {
 			return fmt.Errorf("file is nil")

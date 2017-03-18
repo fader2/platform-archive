@@ -1,8 +1,10 @@
-package test
+package synchronizer
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/boltdb/bolt"
+	store "store/boltdb"
 	//"github.com/boltdb/bolt"
 	"interfaces"
 	"io/ioutil"
@@ -90,4 +92,26 @@ func detectUsedType(dataName string) interfaces.DataUsed {
 	default:
 		return interfaces.RawData
 	}
+}
+
+func newDbManager(db *bolt.DB) DbManager {
+	fm := store.NewFileManager(db)
+	bm := store.NewBucketManager(db)
+	return struct {
+		interfaces.FileManager
+		interfaces.BucketManager
+		interfaces.BucketImportManager
+		interfaces.FileImportManager
+	}{
+		fm, bm, bm, fm,
+	}
+}
+
+func dbHasData(db DbManager) (bool, error) {
+	cnt := 0
+	err := db.EachBucket(func(_ *interfaces.Bucket) error {
+		cnt++
+		return nil
+	})
+	return cnt != 0, err
 }

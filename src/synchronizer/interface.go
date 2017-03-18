@@ -1,4 +1,4 @@
-package test
+package synchronizer
 
 import (
 	"interfaces"
@@ -7,6 +7,8 @@ import (
 type DbManager interface {
 	interfaces.FileManager
 	interfaces.BucketManager
+	interfaces.BucketImportManager
+	interfaces.FileImportManager
 }
 
 type FSManager interface {

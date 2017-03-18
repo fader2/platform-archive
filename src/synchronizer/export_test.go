@@ -1,4 +1,4 @@
-package test
+package synchronizer
 
 import (
 	"github.com/boltdb/bolt"
@@ -8,14 +8,14 @@ import (
 )
 
 func TestExport(t *testing.T) {
-	db, err := bolt.Open("/home/god/go/src/github.com/inpime/fader/_app.db", FilesPermission, &bolt.Options{
+	db, err := bolt.Open("_app.db", FilesPermission, &bolt.Options{
 		Timeout: 1 * time.Second,
 	})
 	defer db.Close()
 	assert.Nil(t, err)
 	assert.NotNil(t, db)
 
-	err = Export(db, DefaultWorkSpaceName)
+	err = Export(newDbManager(db), DefaultWorkSpaceName)
 	assert.Nil(t, err, err)
 
 }

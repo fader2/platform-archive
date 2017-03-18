@@ -1,4 +1,4 @@
-package test
+package synchronizer
 
 import (
 	"github.com/boltdb/bolt"

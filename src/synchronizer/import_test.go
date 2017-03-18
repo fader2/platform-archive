@@ -1,4 +1,4 @@
-package test
+package synchronizer
 
 import (
 	"encoding/json"
@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	boltStore "store/boltdb"
 	"strings"
 	"testing"
 	"time"
@@ -136,13 +135,13 @@ func TestCreateOrGetBucket(t *testing.T) {
 	)
 
 	// test create
-	bucket, isNew, err := createOrGetBucket(testDb, buckName)
+	bucket, isNew, err := createOrGetBucket(newDbManager(testDb), buckName)
 	assert.NoError(t, err, "createing new bucket")
 	assert.Equal(t, true, isNew, "is new bucket")
 	assert.NotNil(t, bucket)
 
 	// test get
-	bucket1, isNew1, err1 := createOrGetBucket(testDb, buckName)
+	bucket1, isNew1, err1 := createOrGetBucket(newDbManager(testDb), buckName)
 	assert.NoError(t, err1, "get existing bucket")
 	assert.Equal(t, false, isNew1, "is old bucket")
 	assert.NotNil(t, bucket1)
@@ -157,17 +156,17 @@ func TestCreateOrGetFile(t *testing.T) {
 		fileName = "file"
 	)
 
-	_, _, err := createOrGetBucket(testDb, buckName)
+	_, _, err := createOrGetBucket(newDbManager(testDb), buckName)
 	assert.NoError(t, err, "createing new bucket")
 
 	// test create
-	file, isNew, err := createOrGetFile(testDb, buckName, fileName)
+	file, isNew, err := createOrGetFile(newDbManager(testDb), buckName, fileName)
 	assert.NoError(t, err, "createing new file")
 	assert.Equal(t, true, isNew, "is new file")
 	assert.NotNil(t, file)
 
 	// test get
-	file1, isNew1, err1 := createOrGetFile(testDb, buckName, fileName)
+	file1, isNew1, err1 := createOrGetFile(newDbManager(testDb), buckName, fileName)
 	assert.NoError(t, err1, "get existing file")
 	assert.Equal(t, false, isNew1, "is old file")
 	assert.NotNil(t, file1)
@@ -179,13 +178,13 @@ func TestImportWorkspace(t *testing.T) {
 		workspaceRoot = "_tw"
 		testDbPath    = "_testDb"
 
-		fileManager *boltStore.FileManager
+		dbManager DbManager
 	)
 
 	initTestDb(testDbPath)
 	defer closeTestDb()
 
-	fileManager = boltStore.NewFileManager(testDb)
+	dbManager = newDbManager(testDb)
 
 	err := os.RemoveAll(workspaceRoot)
 	assert.NoError(t, err, "Error on clean test workspace")
@@ -193,13 +192,13 @@ func TestImportWorkspace(t *testing.T) {
 	err = writeTestWorkspace(workspaceRoot)
 	assert.NoError(t, err, "Error on creating test workspace")
 
-	err = ImportWorkspace(testDb, workspaceRoot)
+	err = ImportWorkspace(newDbManager(testDb), workspaceRoot)
 	assert.NoError(t, err, "Error test import workspace in empty database")
 
 	for filePath, fileMeta := range tw {
 
 		arr := strings.Split(filePath, "/")
-		ifile, err := fileManager.FindFileByName(arr[1], arr[2], interfaces.FullFile)
+		ifile, err := dbManager.FindFileByName(arr[1], arr[2], interfaces.FullFile)
 		assert.NoError(t, err, "Get must existing file from database %s/%s", arr[1], arr[2])
 
 		assert.NoError(t, testFile(ifile, fileMeta.used, fileMeta.data), "file (%s) data test", filePath)
@@ -236,13 +235,13 @@ func TestImportFsDataFile(t *testing.T) {
 		err = ioutil.WriteFile(fP, v.data, FilesPermission)
 		assert.NoError(t, err, "write file (%s)", v.name)
 
-		err = ImportFsDataFile(testDb, DefaultWorkSpaceName, bucketName, fileName, v.name)
+		err = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, fileName, v.name)
 		assert.NoError(t, err, "Import data file (%s)", v.name)
 
 		err = os.Remove(fP)
 		assert.NoError(t, err, "Remove data file (%s)", v.name)
 
-		err = ImportFsDataFile(testDb, DefaultWorkSpaceName, bucketName, fileName, v.name)
+		err = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, fileName, v.name)
 		assert.NoError(t, err, "Import not existing file (%s)", v.name)
 		if err != nil {
 			panic(err)
@@ -262,7 +261,7 @@ func TestImportFsDataFileData(t *testing.T) {
 		data       = []byte("data")
 	)
 
-	err := importFsDataFileData(testDb, bucketName, fileName, dataName, data)
+	err := importFsDataFileData(newDbManager(testDb), bucketName, fileName, dataName, data)
 	assert.NoError(t, err, "import fs data file")
 
 }
@@ -291,18 +290,18 @@ func TestImportNewFile(t *testing.T) {
 	assert.Nil(t, e)
 	f.Close()
 
-	e = ImportFsVirtualFile(testDb, DefaultWorkSpaceName, bucketName, fileName)
+	e = ImportFsVirtualFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, fileName)
 	assert.NoError(t, e, "import virtual file")
 
-	e = ImportFsDataFile(testDb, DefaultWorkSpaceName, bucketName, fileName, fileName)
+	e = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, fileName, fileName)
 	assert.Nil(t, e, eToStr(e))
 
-	fm := boltStore.NewFileManager(testDb)
-	file, e := fm.FindFileByName(bucketName, fileName, interfaces.FullFile)
+	db := newDbManager(testDb)
+	file, e := db.FindFileByName(bucketName, fileName, interfaces.FullFile)
 	assert.Nil(t, e, eToStr(e))
 	assert.Equal(t, testdata, string(file.RawData))
 
-	e = fm.DeleteFile(file.FileID)
+	e = db.DeleteFile(file.FileID)
 	assert.NoError(t, e)
 }
 
@@ -334,16 +333,16 @@ func TestImportExistingFile(t *testing.T) {
 	_, e = f.WriteString("testdata")
 	assert.Nil(t, e)
 
-	e = ImportFsDataFile(testDb, DefaultWorkSpaceName, "ex1", fileName, fileName)
+	e = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, "ex1", fileName, fileName)
 	assert.Nil(t, e, eToStr(e))
 
-	fm := boltStore.NewFileManager(testDb)
-	file, e := fm.FindFileByName("ex1", fileName, interfaces.FullFile)
+	db := newDbManager(testDb)
+	file, e := db.FindFileByName("ex1", fileName, interfaces.FullFile)
 	assert.Nil(t, e, eToStr(e))
 	assert.Equal(t, "testdata", string(file.RawData))
 
 	file.RawData = []byte{}
 
-	e = fm.UpdateFileFrom(file, interfaces.RawData)
+	e = db.UpdateFileFrom(file, interfaces.RawData)
 	assert.NoError(t, e)
 }

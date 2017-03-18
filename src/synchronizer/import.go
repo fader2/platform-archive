@@ -1,10 +1,9 @@
-package test
+package synchronizer
 
 import (
 	"archive/zip"
 	"bytes"
 	"fmt"
-	"github.com/boltdb/bolt"
 	"interfaces"
 	"io"
 	"io/ioutil"
@@ -12,7 +11,6 @@ import (
 	//"log"
 	"os"
 	"path/filepath"
-	boltStore "store/boltdb"
 	"sync"
 
 	uuid "github.com/satori/go.uuid"
@@ -24,10 +22,9 @@ var (
 			return new(bytes.Buffer)
 		},
 	}
-	mu sync.Mutex
 )
 
-func ImportWorkspace(db *bolt.DB, workspaceRoot string) error {
+func ImportWorkspace(db DbManager, workspaceRoot string) error {
 
 	buckets, err := ioutil.ReadDir(workspaceRoot)
 	if err != nil {
@@ -41,7 +38,7 @@ func ImportWorkspace(db *bolt.DB, workspaceRoot string) error {
 	return nil
 }
 
-func ImportWorkspaceZip(db *bolt.DB, workspaceRoot string) error {
+func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
 
 	var (
 		buffer *bytes.Buffer = pool.Get().(*bytes.Buffer)
@@ -101,7 +98,7 @@ func ImportWorkspaceZip(db *bolt.DB, workspaceRoot string) error {
 	return nil
 }
 
-func ImportBucket(db *bolt.DB, workspaceRoot, bucketName string) (err error) {
+func ImportBucket(db DbManager, workspaceRoot, bucketName string) (err error) {
 	var (
 		bucketPath = filepath.Join(workspaceRoot, bucketName)
 	)
@@ -125,12 +122,11 @@ func ImportBucket(db *bolt.DB, workspaceRoot, bucketName string) (err error) {
 
 // ImportFsVirtualFile set folder items (file_name,config.json,meta.json,structural.json) as file in boltdb
 // it return erro if file not exists en db
-func ImportFsVirtualFile(db *bolt.DB, workspaceRoot, bucketName, fileName string) (err error) {
+func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName string) (err error) {
 
 	// todo check file folder contains max 4 files
 
 	var (
-		fm   = boltStore.NewFileManager(db)
 		file *interfaces.File
 
 		buffer   *bytes.Buffer = pool.Get().(*bytes.Buffer)
@@ -194,11 +190,11 @@ func ImportFsVirtualFile(db *bolt.DB, workspaceRoot, bucketName, fileName string
 		}
 	}
 
-	err = fm.UpdateFileFrom(file, interfaces.DataFile)
+	err = db.UpdateFileFrom(file, interfaces.DataFile)
 	return
 }
 
-func ImportFsDataFile(db *bolt.DB, workspaceRoot, bucketName, fileName, dataName string) (err error) {
+func ImportFsDataFile(db DbManager, workspaceRoot, bucketName, fileName, dataName string) (err error) {
 
 	var (
 		filePath               = filepath.Join(workspaceRoot, bucketName, fileName, dataName)
@@ -238,21 +234,15 @@ func ImportFsDataFile(db *bolt.DB, workspaceRoot, bucketName, fileName, dataName
 	return importFsDataFileData(db, bucketName, fileName, dataName, buffer.Bytes())
 }
 
-func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, data []byte) (err error) {
-
-	mu.Lock()
-	defer mu.Unlock()
-
+func importFsDataFileData(db DbManager, bucketName, fileName, dataName string, data []byte) (err error) {
 	var (
-		fileManager = boltStore.NewFileManager(db)
-
 		has    bool
 		used   interfaces.DataUsed
 		file   *interfaces.File
 		bucket *interfaces.Bucket
 	)
 
-	if file, err = fileManager.FindFileByName(bucketName, fileName, interfaces.FullFile); err != nil && err != interfaces.ErrNotFound {
+	if file, err = db.FindFileByName(bucketName, fileName, interfaces.FullFile); err != nil && err != interfaces.ErrNotFound {
 		return
 	} else if err == interfaces.ErrNotFound {
 		has = false
@@ -279,7 +269,7 @@ func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, da
 
 	// put data to database
 	if has {
-		err = fileManager.UpdateFileFrom(file, used)
+		err = db.UpdateFileFrom(file, used)
 	} else {
 		file.FileID = uuid.NewV4()
 		file.BucketID = bucket.BucketID
@@ -287,7 +277,7 @@ func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, da
 		//file.LuaScript = []byte{}
 		//file.ContentType = "text/plain"
 
-		err = fileManager.CreateFile(file)
+		err = db.CreateFile(file)
 		if err != nil {
 			return err
 		}
@@ -296,12 +286,8 @@ func importFsDataFileData(db *bolt.DB, bucketName, fileName, dataName string, da
 	return nil
 }
 
-func createOrGetBucket(db *bolt.DB, bucketName string) (bucket *interfaces.Bucket, isNew bool, err error) {
-	var (
-		bucketManager = boltStore.NewBucketManager(db)
-	)
-
-	if bucket, err = bucketManager.FindBucketByName(bucketName, interfaces.FullBucket); err != nil {
+func createOrGetBucket(db DbManager, bucketName string) (bucket *interfaces.Bucket, isNew bool, err error) {
+	if bucket, err = db.FindBucketByName(bucketName, interfaces.FullBucket); err != nil {
 		if err != interfaces.ErrNotFound {
 			return
 		}
@@ -315,19 +301,17 @@ func createOrGetBucket(db *bolt.DB, bucketName string) (bucket *interfaces.Bucke
 	bucket.BucketID = uuid.NewV4()
 	bucket.BucketName = bucketName
 
-	err = bucketManager.CreateBucket(bucket)
+	err = db.CreateBucket(bucket)
 	return
 }
 
-func createOrGetFile(db *bolt.DB, bucketName, fileName string) (file *interfaces.File, isNew bool, err error) {
+func createOrGetFile(db DbManager, bucketName, fileName string) (file *interfaces.File, isNew bool, err error) {
 
 	var (
-		fileManager = boltStore.NewFileManager(db)
-
 		bucket *interfaces.Bucket
 	)
 
-	if file, err = fileManager.FindFileByName(bucketName, fileName, interfaces.FullFile); err != nil && err != interfaces.ErrNotFound {
+	if file, err = db.FindFileByName(bucketName, fileName, interfaces.FullFile); err != nil && err != interfaces.ErrNotFound {
 		return
 	} else if err == interfaces.ErrNotFound {
 		isNew = true
@@ -347,17 +331,16 @@ func createOrGetFile(db *bolt.DB, bucketName, fileName string) (file *interfaces
 	file.BucketID = bucket.BucketID
 	file.FileName = fileName
 
-	err = fileManager.CreateFile(file)
+	err = db.CreateFile(file)
 	return
 }
 
-func deleteFileByName(db *bolt.DB, bucketName, fileName string) error {
-	fileManager := boltStore.NewFileManager(db)
-	file, err := fileManager.FindFileByName(bucketName, fileName, 0)
+func deleteFileByName(db DbManager, bucketName, fileName string) error {
+	file, err := db.FindFileByName(bucketName, fileName, 0)
 	if err != nil {
 		return err
 	}
-	err = fileManager.DeleteFile(file.FileID)
+	err = db.DeleteFile(file.FileID)
 	if err != nil {
 		return err
 	}
