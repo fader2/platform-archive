@@ -117,3 +117,21 @@ func dbHasData(db DbManager) (bool, error) {
 	})
 	return cnt != 0, err
 }
+
+func fileHasData(f *interfaces.File, used interfaces.DataUsed) bool {
+	if f == nil {
+		return false
+	}
+	switch used {
+	case interfaces.RawData:
+		return len(f.RawData) != 0
+	case interfaces.LuaScript:
+		return len(f.LuaScript) != 0
+	case interfaces.StructuralData:
+		return f.StructuralData != nil && len(f.StructuralData) != 0
+	case interfaces.MetaData:
+		return f.MetaData != nil && len(f.MetaData) != 0
+	default:
+		panic("error DataUsed called for fileHasData (allowed: RawData, LuaScript, StructuralData, MetaData), got " + f.FileName)
+	}
+}

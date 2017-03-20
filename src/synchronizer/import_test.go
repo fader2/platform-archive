@@ -118,6 +118,7 @@ func createFileInWorkspace(workspaceRoot, path string, isDir bool, data string) 
 }
 
 func writeTestWorkspace(workspaceRoot string) error {
+	cleanWorkspace(workspaceRoot)
 	for filePath, file := range tw {
 		if ok, err := createFileInWorkspace(workspaceRoot, filePath, file.isDir, file.data); ok || err != nil {
 			return fmt.Errorf("File exists or an error %v", err)

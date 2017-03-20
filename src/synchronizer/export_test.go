@@ -1,13 +1,19 @@
 package synchronizer
 
 import (
+	"archive/zip"
 	"github.com/boltdb/bolt"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	//"os"
 	"testing"
 	"time"
 )
 
-func TestExport(t *testing.T) {
+func TestZipExport(t *testing.T) {
+	initTestDb("_ex.db")
+	defer closeTestDb()
+
 	db, err := bolt.Open("_app.db", FilesPermission, &bolt.Options{
 		Timeout: 1 * time.Second,
 	})
@@ -18,9 +24,74 @@ func TestExport(t *testing.T) {
 	err = Export(newDbManager(db), DefaultWorkSpaceName)
 	assert.Nil(t, err, err)
 
+	var (
+		exWorkSpace = "_ex"
+		target      = "./_ex.zip"
+	)
+	err = writeTestWorkspace(exWorkSpace)
+	assert.NoError(t, err, "Create test workspace")
+
+	manager := newDbManager(testDb)
+
+	err = ImportWorkspace(manager, exWorkSpace)
+	assert.NoError(t, err, "Import test workspace")
+
+	err = Export(manager, target)
+	assert.NoError(t, err, "Export test workspace to zip file")
+
+	zRdr, err := zip.OpenReader(target)
+	assert.NoError(t, err, "Open exported zip file")
+
+	for _, file := range zRdr.File {
+
+		_, has := tw["/"+file.Name]
+		assert.Equal(t, true, has, "has file in zip file (%s)", file.Name)
+	}
+	t.Log(tw)
+
 }
 
-func TestGetFSFileName(t *testing.T) {
+func TestExport(t *testing.T) {
+	initTestDb("_ex.db")
+	defer closeTestDb()
+
+	db, err := bolt.Open("_app.db", FilesPermission, &bolt.Options{
+		Timeout: 1 * time.Second,
+	})
+	defer db.Close()
+	assert.Nil(t, err)
+	assert.NotNil(t, db)
+
+	err = Export(newDbManager(db), DefaultWorkSpaceName)
+	assert.Nil(t, err, err)
+
+	var (
+		exWorkSpace = "_ex"
+		target      = "_ex1"
+	)
+	err = writeTestWorkspace(exWorkSpace)
+	assert.NoError(t, err, "Create test workspace")
+
+	manager := newDbManager(testDb)
+
+	err = ImportWorkspace(manager, exWorkSpace)
+	assert.NoError(t, err, "Import test workspace")
+
+	err = Export(manager, target)
+	assert.NoError(t, err, "Export test workspace to zip file")
+
+	zRdr, err := ioutil.ReadDir(target)
+	assert.NoError(t, err, "Open exported workspace")
+
+	for _, file := range zRdr {
+		t.Log("/" + file.Name())
+		_, has := tw[file.Name()]
+		assert.Equal(t, true, has, "has file in zip file (%s)", file.Name)
+	}
+
+}
+
+/*func TestGetFSFileName(t *testing.T) {
 	table := [][]string{
 		// filename, filetype, expected name
 		[]string{"fname", "lua", "fname.lua"},
@@ -34,4 +105,4 @@ func TestGetFSFileName(t *testing.T) {
 		got := getFileName(arr[0], arr[1])
 		assert.Equal(t, got, arr[2])
 	}
-}
+}*/
