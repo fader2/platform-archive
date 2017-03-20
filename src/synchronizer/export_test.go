@@ -84,9 +84,11 @@ func TestExport(t *testing.T) {
 	assert.NoError(t, err, "Open exported workspace")
 
 	for _, file := range zRdr {
-		t.Log("/" + file.Name())
-		_, has := tw[file.Name()]
-		assert.Equal(t, true, has, "has file in zip file (%s)", file.Name)
+		if !file.IsDir() {
+			t.Log("/" + file.Name())
+			_, has := tw[file.Name()]
+			assert.Equal(t, true, has, "has file in zip file (%s)", file.Name)
+		}
 	}
 
 }

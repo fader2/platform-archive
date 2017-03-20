@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
+	"net/url"
 	store "store/boltdb"
 	//"github.com/boltdb/bolt"
 	"interfaces"
@@ -134,4 +135,17 @@ func fileHasData(f *interfaces.File, used interfaces.DataUsed) bool {
 	default:
 		panic("error DataUsed called for fileHasData (allowed: RawData, LuaScript, StructuralData, MetaData), got " + f.FileName)
 	}
+}
+
+func getDownloadLink(remote string) (string, error) {
+	u, err := url.Parse(remote)
+	if err != nil {
+		return "", err
+	}
+	// todo
+	// https://github.com/ZloDeeV/gpsgame-android/archive/master.zip
+	if u.Hostname() == "github.com" {
+		return remote + "/archive/master.zip", nil
+	}
+	return "", nil
 }

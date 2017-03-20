@@ -25,3 +25,18 @@ func TestUtils(t *testing.T) {
 	assert.Nil(t, f)
 	t.Log(e)
 }
+
+func TestGetDownloadLink(t *testing.T) {
+	links := []struct {
+		u1, u2 string
+	}{
+		{"https://github.com/ZloDeeV/gpsgame-android", "https://github.com/ZloDeeV/gpsgame-android/archive/master.zip"},
+	}
+
+	for _, v := range links {
+		g, err := getDownloadLink(v.u1)
+		assert.NoError(t, err)
+		assert.Equal(t, v.u2, g)
+	}
+
+}

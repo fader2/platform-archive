@@ -4,7 +4,9 @@ import (
 	"archive/zip"
 	"fmt"
 	"interfaces"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"strings"
 	//"log"
 	"os"
@@ -14,6 +16,10 @@ import (
 )
 
 func ImportWorkspace(db DbManager, workspaceRoot string) error {
+
+	if strings.HasPrefix(workspaceRoot, "https://") {
+		return ImportRemote(db, workspaceRoot)
+	}
 
 	buckets, err := ioutil.ReadDir(workspaceRoot)
 	if err != nil {
@@ -25,6 +31,27 @@ func ImportWorkspace(db DbManager, workspaceRoot string) error {
 		}
 	}
 	return nil
+}
+
+func ImportRemote(db DbManager, remote string) error {
+	ur, err := getDownloadLink(remote)
+	if err != nil {
+		return err
+	}
+	resp, err := http.Get(ur)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	tmpFile, err := ioutil.TempFile("", "fader")
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(tmpFile, resp.Body)
+	if err != nil {
+		return err
+	}
+	return ImportWorkspaceZip(db, tmpFile.Name())
 }
 
 func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
