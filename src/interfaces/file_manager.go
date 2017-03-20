@@ -6,7 +6,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-// DataUsed strategy of data
+// go:generate stringer -type=DataUsed
 type DataUsed uint32
 
 const (

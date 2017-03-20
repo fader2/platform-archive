@@ -85,8 +85,8 @@ var tw = map[string]struct {
 	"/bucket1/file/structural_data.json": {false, interfaces.StructuralData, `{"testkey":"testdata"}`},
 	"/bucket2/emptyfile":                 {true, interfaces.FullFile, ""},
 	"/bucket1/filename/filename":         {false, interfaces.RawData, "data"},
-	"/bucket3/file.html/file.html":       {false, interfaces.RawData, "<!html>"},
-	"/bucket3/file/meta.json":            {false, interfaces.MetaData, `{"testmeta":"testmeta"}`},
+	"/bucket1/file/file":                 {false, interfaces.RawData, "<!html>"},
+	"/bucket1/file/meta.json":            {false, interfaces.MetaData, `{"testmeta":"testmeta"}`},
 }
 
 func createFileInWorkspace(workspaceRoot, path string, isDir bool, data string) (bool, error) {
@@ -201,7 +201,7 @@ func TestImportWorkspace(t *testing.T) {
 		ifile, err := dbManager.FindFileByName(arr[1], arr[2], interfaces.FullFile)
 		assert.NoError(t, err, "Get must existing file from database %s/%s", arr[1], arr[2])
 
-		assert.NoError(t, testFile(ifile, fileMeta.used, fileMeta.data), "file (%s) data test", filePath)
+		assert.NoError(t, testFile(ifile, fileMeta.used, fileMeta.data), "file (%s) data test (%v), %s", filePath, ifile, fileMeta.used)
 	}
 }
 
@@ -257,7 +257,7 @@ func TestImportFsDataFileData(t *testing.T) {
 	var (
 		bucketName = "bucketname"
 		fileName   = "fileName"
-		dataName   = "dataName"
+		dataName   = "fileName"
 		data       = []byte("data")
 	)
 

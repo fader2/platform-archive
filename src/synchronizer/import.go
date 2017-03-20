@@ -2,26 +2,15 @@ package synchronizer
 
 import (
 	"archive/zip"
-	"bytes"
 	"fmt"
 	"interfaces"
-	"io"
 	"io/ioutil"
 	"strings"
 	//"log"
 	"os"
 	"path/filepath"
-	"sync"
 
 	uuid "github.com/satori/go.uuid"
-)
-
-var (
-	pool = sync.Pool{
-		New: func() interface{} {
-			return new(bytes.Buffer)
-		},
-	}
 )
 
 func ImportWorkspace(db DbManager, workspaceRoot string) error {
@@ -41,8 +30,6 @@ func ImportWorkspace(db DbManager, workspaceRoot string) error {
 func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
 
 	var (
-		buffer *bytes.Buffer = pool.Get().(*bytes.Buffer)
-
 		buckets = make(map[string]*interfaces.Bucket)
 	)
 
@@ -53,12 +40,9 @@ func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
 
 	defer func() {
 		r.Close()
-		pool.Put(buffer)
 	}()
 
 	for _, f := range r.File {
-		buffer.Reset()
-
 		arr := strings.SplitN(f.Name, string(os.PathSeparator), 3)
 		if len(arr) != 3 {
 			fmt.Printf("Skip file %s:\n", f.Name)
@@ -84,13 +68,13 @@ func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
 		if err != nil {
 			return err
 		}
-		_, err = io.Copy(buffer, rc)
+		bts, err := ioutil.ReadAll(rc)
 		if err != nil {
 			return err
 		}
 		rc.Close()
 
-		err = importFsDataFileData(db, bucketName, fileName, dataName, buffer.Bytes())
+		err = importFsDataFileData(db, bucketName, fileName, dataName, bts)
 		if err != nil {
 			return err
 		}
@@ -129,16 +113,8 @@ func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName strin
 	var (
 		file *interfaces.File
 
-		buffer   *bytes.Buffer = pool.Get().(*bytes.Buffer)
-		filePath               = filepath.Join(workspaceRoot, bucketName, fileName)
+		filePath = filepath.Join(workspaceRoot, bucketName, fileName)
 	)
-
-	{
-		// return buffer to pool buffer
-		defer func() {
-			pool.Put(buffer)
-		}()
-	}
 
 	files, err := ioutil.ReadDir(filePath)
 	if err != nil {
@@ -165,16 +141,13 @@ func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName strin
 	}
 
 	for _, dataFile := range files {
-		buffer.Reset()
 		f, err := os.OpenFile(filepath.Join(filePath, dataFile.Name()), os.O_RDONLY, FilesPermission)
 		if err != nil {
 			return err
 		}
 
 		// todo test file is no folder
-
-		// put data in buffer here
-		_, err = io.Copy(buffer, f)
+		bts, err := ioutil.ReadAll(f)
 		if err != nil {
 			return err
 		}
@@ -183,8 +156,11 @@ func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName strin
 			return err
 		}
 
-		tused := detectUsedType(dataFile.Name())
-		err = setDataToFile(file, tused, buffer.Bytes())
+		tused, err := detectUsedType(fileName, dataFile.Name())
+		if err != nil {
+			return err
+		}
+		err = setDataToFile(file, tused, bts)
 		if err != nil {
 			return err
 		}
@@ -197,19 +173,12 @@ func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName strin
 func ImportFsDataFile(db DbManager, workspaceRoot, bucketName, fileName, dataName string) (err error) {
 
 	var (
-		filePath               = filepath.Join(workspaceRoot, bucketName, fileName, dataName)
-		buffer   *bytes.Buffer = pool.Get().(*bytes.Buffer)
+		filePath = filepath.Join(workspaceRoot, bucketName, fileName, dataName)
+		bts      []byte
 	)
-
-	defer func() {
-		pool.Put(buffer)
-	}()
 
 	// copy file data to buffer
 	{
-		// empty buffer
-		buffer.Reset()
-
 		f, err := os.OpenFile(filePath, os.O_RDONLY, FilesPermission)
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), "no such file or directory") {
@@ -220,7 +189,7 @@ func ImportFsDataFile(db DbManager, workspaceRoot, bucketName, fileName, dataNam
 			// todo test file is no folder
 
 			// put data in buffer here
-			_, err = io.Copy(buffer, f)
+			bts, err = ioutil.ReadAll(f)
 			if err != nil {
 				return err
 			}
@@ -231,7 +200,7 @@ func ImportFsDataFile(db DbManager, workspaceRoot, bucketName, fileName, dataNam
 		}
 	}
 
-	return importFsDataFileData(db, bucketName, fileName, dataName, buffer.Bytes())
+	return importFsDataFileData(db, bucketName, fileName, dataName, bts)
 }
 
 func importFsDataFileData(db DbManager, bucketName, fileName, dataName string, data []byte) (err error) {
@@ -260,7 +229,10 @@ func importFsDataFileData(db DbManager, bucketName, fileName, dataName string, d
 
 	// detect content type
 	{
-		used = detectUsedType(dataName)
+		used, err = detectUsedType(fileName, dataName)
+		if err != nil {
+			return err
+		}
 		err = setDataToFile(file, used, data)
 		if err != nil {
 			return err

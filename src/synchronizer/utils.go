@@ -81,16 +81,18 @@ func setDataToFile(file *interfaces.File, used interfaces.DataUsed, data []byte)
 	return nil
 }
 
-func detectUsedType(dataName string) interfaces.DataUsed {
+func detectUsedType(fileName, dataName string) (interfaces.DataUsed, error) {
 	switch dataName {
 	case LuaScriptDataFileName:
-		return interfaces.LuaScript
+		return interfaces.LuaScript, nil
 	case MetaDataFileName:
-		return interfaces.MetaData
+		return interfaces.MetaData, nil
 	case StructuralDataFileName:
-		return interfaces.StructuralData
+		return interfaces.StructuralData, nil
+	case fileName:
+		return interfaces.RawData, nil
 	default:
-		return interfaces.RawData
+		return 0, fmt.Errorf("Unknown file name (file:%s, data: %s)", fileName, dataName)
 	}
 }
 
