@@ -139,8 +139,8 @@ func (s *Synchronizer) MakeWatchFunc() func(opname fs.Op, name string, oldname s
 	return func(opname fs.Op, name string, oldname string) {
 		fmt.Println("[Watch Event]", opname, name, oldname)
 		switch opname {
-		case fs.ModifyOrCreateFile:
-		case fs.CreateFileOrFolder:
+		case fs.CreateFileOrFolder,
+			fs.ModifyOrCreateFile:
 			err := s.handleUpdateOrCreate(name, oldname)
 			if err != nil {
 				//todo handle it

@@ -20,9 +20,11 @@ func InitFirstRunIfNeed() error {
 }
 
 func ImportBase64File(filePath string) error {
+	logger.Println("[IMPORT 64]", filePath)
+
 	var data []byte
 
-	if strings.HasPrefix("http", settings.InitFile) {
+	if strings.HasPrefix("http", filePath) {
 		logger.Println("download from the internet is not implemented")
 		return errors.New("not implemented")
 	}

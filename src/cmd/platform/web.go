@@ -1,49 +1,9 @@
-// Copyright (c) Fader, IP. All Rights Reserved.
-// See LICENSE for license information.
-
-/*package main
-
-import (
-	"context"
-	"flag"
-	"fs"
-	"log"
-
-	"os"
-
-	"github.com/SentimensRG/sigctx"
-	"github.com/fsnotify/fsnotify"
-)
-
-var (
-	flagWatcher = flag.Bool("watch", false, "run watcher for FADER_WORKSPACE")
-	watcher     *fsnotify.Watcher
-)
-
-func main() {
-	flag.Parse()
-
-	ctx := sigctx.New()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	if *flagWatcher {
-		w := fs.NewFSWatcher()
-
-		if err := w.Run(ctx, os.Getenv("FADER_WORKSPACE")); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	<-ctx.Done()
-}
-*/
-
 package main
 
 import (
 	"api"
-	"flag"
+
+	"github.com/urfave/cli"
 	"log"
 	"os"
 	"os/signal"
@@ -55,13 +15,6 @@ import (
 	"github.com/tylerb/graceful"
 )
 
-var flagPortListener = flag.String("port", "1323", "http listener port")
-var flagHostListener = flag.String("host", "", "http listener host or ip")
-var flagDatabasePath = flag.String("db", "", "path to file database boltdb")
-
-var falgWatch = flag.Bool("watch", false, "enable file system workspace synchromization")
-var flagWorkspace = flag.String("workspace", "FaderWorkspace", "Workspace path. Ignored if watch = false")
-
 var logger = *log.New(os.Stderr, "[main]", 1)
 
 const (
@@ -72,18 +25,39 @@ const (
 	FADER_INITFILE = "FADER_INITFILE"
 )
 
-func main() {
-	flag.Parse()
+var (
+	runWeb = cli.Command{
+		Name:   "web",
+		Action: startWeb,
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name: "watch",
+			},
+			cli.StringFlag{
+				Name:  "port",
+				Value: "1323",
+			},
+			cli.StringFlag{
+				Name: "host",
+			},
+		},
+	}
+)
 
-	logger.Println("Start http api...")
-
-	e := echo.New()
-
-	settings := settingsFromENV()
+func setup(e *echo.Echo, ctx *cli.Context) {
+	settings := settingsFromENV(ctx)
 
 	if err := api.Setup(e, settings); err != nil {
 		logger.Fatalln("[FATAL] setup,", err)
 	}
+}
+
+func startWeb(ctx *cli.Context) {
+
+	logger.Println("Start http api...")
+
+	e := echo.New()
+	setup(e, ctx)
 
 	// ---------------------------
 	// HTTP server
@@ -92,7 +66,7 @@ func main() {
 	serverSignal := make(chan struct{}, 1)
 
 	go func() {
-		addr := *flagHostListener + ":" + *flagPortListener
+		addr := ctx.String("host") + ":" + ctx.String("port")
 
 		logger.Println("HTTP listener address: ", addr)
 
@@ -133,7 +107,7 @@ func main() {
 	os.Exit(0)
 }
 
-func settingsFromENV() *api.Settings {
+func settingsFromENV(ctx *cli.Context) *api.Settings {
 	return &api.Settings{
 		ApiHost:      os.Getenv(FADER_HTTPHOST),
 		ApiPort:      os.Getenv(FADER_HTTPPORT),
@@ -141,6 +115,6 @@ func settingsFromENV() *api.Settings {
 		LogLevel:     api.LogLevelFrom(os.Getenv(FADER_LOGLEVEL)),
 		InitFile:     os.Getenv(FADER_INITFILE),
 
-		Watch: *falgWatch,
+		Watch: ctx.Bool("watch"),
 	}
 }

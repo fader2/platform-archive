@@ -84,6 +84,8 @@ func (w FSWatcher) Run(
 ) (
 	err error,
 ) {
+	fmt.Println("Starded eatcher", rootPath)
+
 	w.watcher, err = fsnotify.NewWatcher()
 	if err != nil {
 		return

@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	DefaultWorkSpaceName = "./FaderWorkspace"
+	DefaultWorkSpaceName = "FaderWorkspace"
 
 	LuaExt  = ".lua"
 	JSONExt = ".json"

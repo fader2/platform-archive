@@ -35,7 +35,10 @@ var (
 
 	fileManager   interfaces.FileManager
 	bucketManager interfaces.BucketManager
-	inMemStore    *InMemoryStore
+
+	dbManager synchronizer.DbManager
+
+	inMemStore *InMemoryStore
 
 	db *bolt.DB
 
@@ -71,7 +74,7 @@ func Setup(e *echo.Echo, _settings *Settings) error {
 	fileManager = boltdb.NewFileManager(db)
 	inMemStore = NewInMemoryStore(db)
 
-	dbManager := struct {
+	dbManager = struct {
 		interfaces.FileManager
 		interfaces.FileImportManager
 		interfaces.BucketManager
@@ -106,12 +109,11 @@ func Setup(e *echo.Echo, _settings *Settings) error {
 		}
 
 		watcher := fs.NewFSWatcherWithHook(s.MakeWatchFunc())
-		go func() {
-			err := watcher.Run(context.TODO(), _settings.Workspace)
-			if err != nil {
-				logger.Println("[ERR] watcher ", err)
-			}
-		}()
+
+		err = watcher.Run(context.TODO(), "./"+_settings.Workspace)
+		if err != nil {
+			logger.Println("[ERR] watcher ", err)
+		}
 
 		err = s.Sync()
 		if err != nil {
@@ -196,4 +198,8 @@ func Setup(e *echo.Echo, _settings *Settings) error {
 	logger.Println("init... done")
 
 	return nil
+}
+
+func ImportWorkspace(path string) error {
+	return synchronizer.ImportWorkspace(dbManager, path)
 }

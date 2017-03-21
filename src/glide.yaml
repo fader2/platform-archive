@@ -16,6 +16,7 @@ import:
 - package: gopkg.in/fsnotify.v1
 - package: golang.org/x/sys/...
 - package: github.com/SentimensRG/sigctx
+- package: github.com/urfave/cli
 - package: github.com/labstack/echo
   version: v2.2.0
   subpackages:
