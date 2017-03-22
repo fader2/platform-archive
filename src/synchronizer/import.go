@@ -21,6 +21,10 @@ func ImportWorkspace(db DbManager, workspaceRoot string) error {
 		return ImportRemote(db, workspaceRoot)
 	}
 
+	if strings.HasSuffix(workspaceRoot, ".zip") {
+		return ImportWorkspaceZip(db, workspaceRoot)
+	}
+
 	buckets, err := ioutil.ReadDir(workspaceRoot)
 	if err != nil {
 		return err
@@ -58,6 +62,9 @@ func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
 
 	var (
 		buckets = make(map[string]*interfaces.Bucket)
+
+		// for github archives
+		skip = 0
 	)
 
 	r, err := zip.OpenReader(workspaceRoot)
@@ -69,18 +76,24 @@ func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
 		r.Close()
 	}()
 
+	if isGithubArchive(r.File) {
+		skip++
+	}
+
 	for _, f := range r.File {
-		arr := strings.SplitN(f.Name, string(os.PathSeparator), 3)
-		if len(arr) != 3 {
+		arr := strings.SplitN(f.Name, string(os.PathSeparator), 3+skip)
+		if len(arr) != 3+skip || strings.HasSuffix(f.Name, "/") {
 			fmt.Printf("Skip file %s:\n", f.Name)
 			continue
 		}
 
 		var (
-			bucketName string = arr[0]
-			fileName   string = arr[1]
-			dataName   string = arr[2]
+			bucketName string = arr[0+skip]
+			fileName   string = arr[1+skip]
+			dataName   string = arr[2+skip]
 		)
+
+		fmt.Println("IMPORT", bucketName, fileName, dataName, f.Name)
 
 		// todo. create other way to kreatin buckets
 		if bucket, ok := buckets[bucketName]; !ok {

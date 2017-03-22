@@ -1,11 +1,13 @@
 package synchronizer
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
 	"net/url"
 	store "store/boltdb"
+	"strings"
 	//"github.com/boltdb/bolt"
 	"interfaces"
 	"io/ioutil"
@@ -148,4 +150,14 @@ func getDownloadLink(remote string) (string, error) {
 		return remote + "/archive/master.zip", nil
 	}
 	return "", nil
+}
+
+func isGithubArchive(files []*zip.File) bool {
+	for _, file := range files {
+		if strings.HasSuffix(file.Name, "-master/") {
+			fmt.Println("GITHUB ARRCHIBFE")
+			return true
+		}
+	}
+	return false
 }
