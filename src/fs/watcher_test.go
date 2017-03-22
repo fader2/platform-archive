@@ -73,17 +73,17 @@ func TestWatcher_simple(t *testing.T) {
 	time.Sleep(150 * time.Millisecond)
 
 	// remove folder
-	RemoveContents(dir)
+	RemoveContents(t, dir)
 
 	time.Sleep(500 * time.Millisecond)
 
 	assert.EqualValues(t, 2, counterCreate)
 	assert.EqualValues(t, 1, counterModify)
-	assert.EqualValues(t, 2, counterRemove)
+	assert.EqualValues(t, 1, counterRemove)
 }
 
 // http://stackoverflow.com/questions/33450980/golang-remove-all-contents-of-a-directory?answertab=votes#tab-top
-func RemoveContents(dir string) error {
+func RemoveContents(t *testing.T, dir string) error {
 	d, err := os.Open(dir)
 	if err != nil {
 		return err
@@ -98,6 +98,7 @@ func RemoveContents(dir string) error {
 		if err != nil {
 			return err
 		}
+		t.Logf("Remone %s", name)
 	}
 	return nil
 }

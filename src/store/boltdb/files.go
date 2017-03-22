@@ -379,6 +379,15 @@ func getFileData(
 	used interfaces.DataUsed,
 	logger *log.Logger,
 ) error {
+	{
+		if file.StructuralData == nil {
+			file.StructuralData = make(map[string]interface{})
+		}
+		if file.MetaData == nil {
+			file.MetaData = make(map[string]interface{})
+		}
+	}
+
 	superID := make([]byte, 17)
 	copy(superID, file.FileID.Bytes())
 

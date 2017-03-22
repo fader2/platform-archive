@@ -208,6 +208,7 @@ func (m *BucketManager) FindBucketByName(
 	// 4. get bucket by ID
 	return m.FindBucket(bucketID, used)
 }
+
 func (m *BucketManager) FindBucket(
 	bucketID uuid.UUID,
 	used interfaces.DataUsed,
