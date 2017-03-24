@@ -118,7 +118,7 @@ func makeExportFileFunc(fileManager DbManager, buckets map[string]*interfaces.Bu
 			return fmt.Errorf("Bucket not found for file %s", file.FileName)
 		}
 
-		targetPath := filepath.Join(bucket.BucketName, file.FileName)
+		targetPath := bucket.BucketName
 		if !isZip {
 			targetPath = filepath.Join(targetWorkspace, targetPath)
 			if err := os.MkdirAll(targetPath, FilesPermission); err != nil && !os.IsExist(err) {
@@ -195,11 +195,11 @@ func getFileName(currentName string, typ interfaces.DataUsed) string {
 	case interfaces.RawData:
 		return currentName
 	case interfaces.LuaScript:
-		return LuaScriptDataFileName
+		return currentName + ".lua"
 	case interfaces.StructuralData:
-		return StructuralDataFileName
+		return currentName + ".json"
 	case interfaces.MetaData:
-		return MetaDataFileName
+		return currentName + ".meta.json"
 	default:
 		panic("error DataUsed called for getFileName (allowed: RawData, LuaScript, StructuralData, MetaData), got " + currentName)
 	}

@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	DefaultWorkspace = "_workspace"
+	DefaultWorkspace = "FaderWorkspace"
 )
 
 type Op uint32
@@ -78,7 +78,7 @@ type FSWatcher struct {
 	hook          Hook
 }
 
-func (w FSWatcher) Run(
+func (w FSWatcher) Watch(
 	ctx context.Context,
 	rootPath string,
 ) (
