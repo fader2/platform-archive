@@ -40,7 +40,7 @@ func TestWatcher_simple(t *testing.T) {
 			t.Log(op, oldname, name)
 		},
 	)
-	err = w.Run(
+	err = w.Watch(
 		context.TODO(),
 		dir,
 	)

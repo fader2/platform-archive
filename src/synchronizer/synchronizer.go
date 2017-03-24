@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 	//boltStore "store/boltdb"
 )
@@ -19,15 +20,19 @@ const (
 	LuaScriptDataFileName  = "script.lua"
 
 	SyncInfoFileName = ".fader_index"
+
+	DefaultFrequency = 1250 * time.Millisecond
 )
 
 type Synchronizer struct {
 	inited bool
+	initMu sync.Mutex
 
 	dbManager     DbManager
 	workSpacePath string
 
-	tree tree
+	pollFreq time.Duration
+	tree     tree
 }
 
 func NewSynchronizer(workSpacePath string, dbManager DbManager) (*Synchronizer, error) {
@@ -35,6 +40,8 @@ func NewSynchronizer(workSpacePath string, dbManager DbManager) (*Synchronizer, 
 		workSpacePath: workSpacePath,
 
 		dbManager: dbManager,
+
+		pollFreq: DefaultFrequency,
 
 		// tree will be initialized in init
 	}
@@ -49,7 +56,10 @@ func NewSynchronizer(workSpacePath string, dbManager DbManager) (*Synchronizer, 
 //    has data      ->    has data
 //    empty               empty    // do nothing
 //
-func (s *Synchronizer) Init() error {
+func (s *Synchronizer) Init() (err error) {
+	s.initMu.Lock()
+	defer s.initMu.Unlock()
+
 	if s.inited {
 		return nil
 	}
@@ -79,9 +89,10 @@ func (s *Synchronizer) Init() error {
 		workSpaceHasSyncInfoFile = true
 	}
 
+	treePath := filepath.Join(s.workSpacePath, SyncInfoFileName)
 	if workSpaceHasSyncInfoFile {
 		s.tree = make(tree)
-		f, err := os.OpenFile(filepath.Join(s.workSpacePath, SyncInfoFileName), os.O_RDONLY, FilesPermission)
+		f, err := os.OpenFile(treePath, os.O_RDONLY, FilesPermission)
 		if err != nil {
 			return err
 		}
@@ -94,10 +105,17 @@ func (s *Synchronizer) Init() error {
 			return err
 		}
 	} else {
-		s.tree = make(tree)
+		s.tree, err = newTreeFromFs(s.workSpacePath)
+		if err != nil {
+			return err
+		}
+		err = s.tree.EncodeToFile(treePath)
+		if err != nil {
+			return err
+		}
 	}
 
-	dbHasBuckets, err := dbHasData(s.dbManager)
+	dbHasBuckets, err = dbHasData(s.dbManager)
 	if err != nil {
 		return err
 	}
@@ -157,6 +175,48 @@ func (s *Synchronizer) MakeWatchFunc() func(opname fs.Op, name string, oldname s
 		}
 
 	}
+}
+
+func (s *Synchronizer) Watch() error {
+	if err := s.Init(); err != nil {
+		return err
+	}
+	go func() {
+		interval := time.NewTicker(s.pollFreq)
+		for range interval.C {
+			//start := time.Now()
+			current, err := newTreeFromFs(s.workSpacePath)
+			if err != nil {
+				fmt.Println("[WATCHER ERR]", err)
+				break
+			}
+			changes := s.tree.Calculate(current)
+			for _, op := range changes {
+				fmt.Println("[WATCH event]", op.Op, op.Path)
+				switch op.Op {
+				case change, create, mkDir:
+					err := s.handleUpdateOrCreate(filepath.Join(s.workSpacePath, op.Path), "")
+					if err != nil {
+						fmt.Println("[WATCHER ERR]", err)
+						break
+					}
+				case unlink, rmDir:
+					err := s.handleRemoveFile(filepath.Join(s.workSpacePath, op.Path))
+					if err != nil {
+						fmt.Println("[WATCHER ERR]", err)
+						break
+					}
+				}
+			}
+			if len(changes) != 0 {
+				treePath := filepath.Join(s.workSpacePath, SyncInfoFileName)
+				current.EncodeToFile(treePath)
+				s.tree = current
+			}
+			//fmt.Println(time.Since(start))
+		}
+	}()
+	return nil
 }
 
 func (s *Synchronizer) handleRemoveFile(name string) error {
@@ -235,14 +295,42 @@ type fsItem struct {
 	Size    int64
 	ModTime time.Time
 	Hash    string
+	IsDir   bool
 }
 
 func newTree() tree {
 	return make(tree)
 }
 
+func newTreeFromFs(root string) (tree, error) {
+	t := make(tree)
+	walcFunc := func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil {
+			return nil
+		}
+		path = strings.TrimPrefix(path, filepath.Join(root, "/"))
+
+		if path == "" {
+			return nil
+		}
+
+		item := fsItem{
+			Path:    path,
+			Size:    info.Size(),
+			ModTime: info.ModTime(),
+			IsDir:   info.IsDir(),
+		}
+		t[path] = item
+		return nil
+	}
+
+	err := filepath.Walk(root, walcFunc)
+	return t, err
+}
+
 func (t tree) Encode(writer io.Writer) error {
 	enc := json.NewEncoder(writer)
+	enc.SetIndent("  ", "  ")
 	err := enc.Encode(t)
 	return err
 }
@@ -253,4 +341,74 @@ func (t *tree) Decode(reader io.Reader) error {
 	err := dec.Decode(t)
 	t = &tt
 	return err
+}
+
+func (t *tree) EncodeToFile(path string) error {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, FilesPermission)
+	if err != nil {
+		return err
+	}
+	err = t.Encode(f)
+	if err != nil {
+		return err
+	}
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type ops int
+
+const (
+	create = iota + 1
+	unlink
+	rmDir
+	mkDir
+	change
+)
+
+type Op struct {
+	Path string
+	Op   ops
+}
+
+func (prev tree) Calculate(current tree) []Op {
+
+	updates := []Op{}
+
+	// check new files
+	for path, item := range current {
+
+		if strings.HasSuffix(path, SyncInfoFileName) {
+			continue
+		}
+
+		if prevItem, has := prev[path]; !has {
+			if prevItem.IsDir {
+				updates = append(updates, Op{Path: path, Op: mkDir})
+			} else {
+				updates = append(updates, Op{Path: path, Op: create})
+			}
+		} else {
+			// check update file
+			if !item.IsDir && (!item.ModTime.Equal(prevItem.ModTime) || item.Size != prevItem.Size) {
+				updates = append(updates, Op{Path: path, Op: change})
+			}
+		}
+	}
+
+	// check deletes
+	for path, prevItem := range prev {
+		if _, has := current[path]; !has {
+			if prevItem.IsDir {
+				updates = append(updates, Op{Path: path, Op: rmDir})
+			} else {
+				updates = append(updates, Op{Path: path, Op: unlink})
+			}
+		}
+	}
+
+	return updates
 }

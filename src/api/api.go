@@ -4,8 +4,6 @@
 package api
 
 import (
-	"context"
-	"fs"
 	"synchronizer"
 
 	"addons"
@@ -103,17 +101,13 @@ func Setup(e *echo.Echo, _settings *Settings) error {
 		if _settings.Workspace == "" {
 			_settings.Workspace = synchronizer.DefaultWorkSpaceName
 		}
-		s, err := synchronizer.NewSynchronizer(synchronizer.DefaultWorkSpaceName, dbManager)
+
+		s, err := synchronizer.NewSynchronizer(_settings.Workspace, dbManager)
 		if err != nil {
 			return err
 		}
 
-		watcher := fs.NewFSWatcherWithHook(s.MakeWatchFunc())
-
-		err = watcher.Run(context.TODO(), "./"+_settings.Workspace)
-		if err != nil {
-			logger.Println("[ERR] watcher ", err)
-		}
+		s.Watch()
 
 		err = s.Sync()
 		if err != nil {

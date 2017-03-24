@@ -30,6 +30,9 @@ func ImportWorkspace(db DbManager, workspaceRoot string) error {
 		return err
 	}
 	for _, bucket := range buckets {
+		if !bucket.IsDir() {
+			continue
+		}
 		if err = ImportBucket(db, workspaceRoot, bucket.Name()); err != nil {
 			return err
 		}
