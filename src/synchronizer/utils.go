@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/boltdb/bolt"
 	"net/url"
+	"path/filepath"
 	store "store/boltdb"
 	"strings"
 	//"github.com/boltdb/bolt"
@@ -84,18 +85,19 @@ func setDataToFile(file *interfaces.File, used interfaces.DataUsed, data []byte)
 	return nil
 }
 
-func detectUsedType(fileName, dataName string) (interfaces.DataUsed, error) {
-	switch dataName {
-	case LuaScriptDataFileName:
+func detectUsedType(dataName string) (interfaces.DataUsed, error) {
+
+	switch filepath.Ext(dataName) {
+	case ".lua":
 		return interfaces.LuaScript, nil
-	case MetaDataFileName:
-		return interfaces.MetaData, nil
-	case StructuralDataFileName:
-		return interfaces.StructuralData, nil
-	case fileName:
-		return interfaces.RawData, nil
+	case ".json":
+		if strings.HasSuffix(dataName, ".meta.json") {
+			return interfaces.MetaData, nil
+		} else {
+			return interfaces.StructuralData, nil
+		}
 	default:
-		return 0, fmt.Errorf("Unknown file name (file:%s, data: %s)", fileName, dataName)
+		return interfaces.RawData, nil
 	}
 }
 
@@ -158,6 +160,34 @@ func isGithubArchive(files []*zip.File) bool {
 			fmt.Println("GITHUB ARRCHIBFE")
 			return true
 		}
+	}
+	return false
+}
+
+func originFileName(fname string) string {
+	var sufs = []string{
+		".meta.json",
+		".json",
+		".lua",
+	}
+	for _, suf := range sufs {
+		if strings.HasSuffix(fname, suf) {
+			return strings.TrimSuffix(fname, suf)
+		}
+	}
+	return fname
+}
+
+func ignoreImport(path string) bool {
+	if originFileName(path) != path {
+		return true
+	}
+	// ignore index file
+	if strings.HasSuffix(path, SyncInfoFileName) {
+		return true
+	}
+	if strings.Contains(path, ".git") {
+		return true
 	}
 	return false
 }

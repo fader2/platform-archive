@@ -270,15 +270,12 @@ func (s *Synchronizer) handleUpdateOrCreate(name, oldname string) error {
 	if len(arr) == 2 {
 		fmt.Println("Path is bucket, skip")
 	} else if len(arr) == 3 {
-		fmt.Println("Path is file folder, skip")
-	} else if len(arr) == 4 {
 		fmt.Printf("we need update file, with %s filename, %s bucketname\n", arr[2], arr[1])
 
 		bucketName := arr[1]
 		fileName := arr[2]
-		dataName := arr[3]
 
-		err := ImportFsDataFile(s.dbManager, s.workSpacePath, bucketName, fileName, dataName)
+		err := ImportFsDataFile(s.dbManager, s.workSpacePath, bucketName, fileName)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -308,6 +305,17 @@ func newTreeFromFs(root string) (tree, error) {
 		if err != nil || info == nil {
 			return nil
 		}
+
+		if info.IsDir() && strings.Contains(path, ".git") {
+			return filepath.SkipDir
+		} else if strings.Contains(path, ".git") {
+			return nil
+		}
+
+		if strings.Contains(path, ".fader_index") {
+			return nil
+		}
+
 		path = strings.TrimPrefix(path, filepath.Join(root, "/"))
 
 		if path == "" {

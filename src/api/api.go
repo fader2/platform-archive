@@ -107,12 +107,12 @@ func Setup(e *echo.Echo, _settings *Settings) error {
 			return err
 		}
 
-		s.Watch()
-
 		err = s.Sync()
 		if err != nil {
 			return err
 		}
+
+		s.Watch()
 	}
 
 	templates.DefaultTemplatesLoader = interfaces.NewTemplatesStore(fileManager)

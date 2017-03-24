@@ -30,7 +30,7 @@ func ImportWorkspace(db DbManager, workspaceRoot string) error {
 		return err
 	}
 	for _, bucket := range buckets {
-		if !bucket.IsDir() {
+		if !bucket.IsDir() || ignoreImport(bucket.Name()) {
 			continue
 		}
 		if err = ImportBucket(db, workspaceRoot, bucket.Name()); err != nil {
@@ -84,19 +84,18 @@ func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
 	}
 
 	for _, f := range r.File {
-		arr := strings.SplitN(f.Name, string(os.PathSeparator), 3+skip)
-		if len(arr) != 3+skip || strings.HasSuffix(f.Name, "/") {
+		arr := strings.SplitN(f.Name, string(os.PathSeparator), 2+skip)
+		if len(arr) != 2+skip || strings.HasSuffix(f.Name, "/") {
 			fmt.Printf("Skip file %s:\n", f.Name)
 			continue
 		}
 
 		var (
 			bucketName string = arr[0+skip]
-			fileName   string = arr[1+skip]
-			dataName   string = arr[2+skip]
+			dataName   string = arr[1+skip]
 		)
 
-		fmt.Println("IMPORT", bucketName, fileName, dataName, f.Name)
+		fmt.Println("IMPORT", bucketName, dataName, f.Name)
 
 		// todo. create other way to kreatin buckets
 		if bucket, ok := buckets[bucketName]; !ok {
@@ -117,7 +116,7 @@ func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
 		}
 		rc.Close()
 
-		err = importFsDataFileData(db, bucketName, fileName, dataName, bts)
+		err = importFsDataFileData(db, bucketName, dataName, bts)
 		if err != nil {
 			return err
 		}
@@ -139,6 +138,10 @@ func ImportBucket(db DbManager, workspaceRoot, bucketName string) (err error) {
 		return err
 	}
 	for _, file := range files {
+		fmt.Println("[LOL]", file.Name())
+		if ignoreImport(file.Name()) {
+			continue
+		}
 		if err = ImportFsVirtualFile(db, workspaceRoot, bucketName, file.Name()); err != nil {
 			return err
 		}
@@ -151,18 +154,25 @@ func ImportBucket(db DbManager, workspaceRoot, bucketName string) (err error) {
 // it return erro if file not exists en db
 func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName string) (err error) {
 
-	// todo check file folder contains max 4 files
-
 	var (
 		file *interfaces.File
 
 		filePath = filepath.Join(workspaceRoot, bucketName, fileName)
+		exts     = []string{".lua", ".json", ".meta.json"}
+		needs    = []string{}
 	)
 
-	files, err := ioutil.ReadDir(filePath)
-	if err != nil {
-		return
+	if _, err := os.Stat(filePath); err == nil {
+		needs = append(needs, filePath)
 	}
+
+	for _, ext := range exts {
+		fp := filePath + ext
+		if _, err := os.Stat(fp); err == nil {
+			needs = append(needs, fp)
+		}
+	}
+	fmt.Println("IMPORT", needs)
 	//todo ?? need delete file if it empty folder?
 	//if len(files) == 0 {
 	//	return deleteFileByName(db, bucketName, fileName)
@@ -183,8 +193,8 @@ func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName strin
 		file.StructuralData = make(map[string]interface{})
 	}
 
-	for _, dataFile := range files {
-		f, err := os.OpenFile(filepath.Join(filePath, dataFile.Name()), os.O_RDONLY, FilesPermission)
+	for _, path := range needs {
+		f, err := os.OpenFile(path, os.O_RDONLY, FilesPermission)
 		if err != nil {
 			return err
 		}
@@ -199,7 +209,7 @@ func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName strin
 			return err
 		}
 
-		tused, err := detectUsedType(fileName, dataFile.Name())
+		tused, err := detectUsedType(path)
 		if err != nil {
 			return err
 		}
@@ -213,10 +223,10 @@ func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName strin
 	return
 }
 
-func ImportFsDataFile(db DbManager, workspaceRoot, bucketName, fileName, dataName string) (err error) {
+func ImportFsDataFile(db DbManager, workspaceRoot, bucketName, fileName string) (err error) {
 
 	var (
-		filePath = filepath.Join(workspaceRoot, bucketName, fileName, dataName)
+		filePath = filepath.Join(workspaceRoot, bucketName, fileName)
 		bts      []byte
 	)
 
@@ -243,15 +253,16 @@ func ImportFsDataFile(db DbManager, workspaceRoot, bucketName, fileName, dataNam
 		}
 	}
 
-	return importFsDataFileData(db, bucketName, fileName, dataName, bts)
+	return importFsDataFileData(db, bucketName, fileName, bts)
 }
 
-func importFsDataFileData(db DbManager, bucketName, fileName, dataName string, data []byte) (err error) {
+func importFsDataFileData(db DbManager, bucketName, dataName string, data []byte) (err error) {
 	var (
-		has    bool
-		used   interfaces.DataUsed
-		file   *interfaces.File
-		bucket *interfaces.Bucket
+		has      bool
+		used     interfaces.DataUsed
+		file     *interfaces.File
+		bucket   *interfaces.Bucket
+		fileName = originFileName(dataName)
 	)
 
 	if file, err = db.FindFileByName(bucketName, fileName, interfaces.FullFile); err != nil && err != interfaces.ErrNotFound {
@@ -272,7 +283,7 @@ func importFsDataFileData(db DbManager, bucketName, fileName, dataName string, d
 
 	// detect content type
 	{
-		used, err = detectUsedType(fileName, dataName)
+		used, err = detectUsedType(dataName)
 		if err != nil {
 			return err
 		}

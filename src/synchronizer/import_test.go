@@ -82,11 +82,11 @@ var tw = map[string]struct {
 	used  interfaces.DataUsed
 	data  string
 }{
-	"/bucket1/file/structural_data.json": {false, interfaces.StructuralData, `{"testkey":"testdata"}`},
-	"/bucket2/emptyfile":                 {true, interfaces.FullFile, ""},
-	"/bucket1/filename/filename":         {false, interfaces.RawData, "data"},
-	"/bucket1/file/file":                 {false, interfaces.RawData, "<!html>"},
-	"/bucket1/file/meta.json":            {false, interfaces.MetaData, `{"testmeta":"testmeta"}`},
+	"/bucket1/file.json":      {false, interfaces.StructuralData, `{"testkey":"testdata"}`},
+	"/bucket2/emptyfile":      {false, interfaces.FullFile, ""},
+	"/bucket1/filename":       {false, interfaces.RawData, "data"},
+	"/bucket1/file":           {false, interfaces.RawData, "<!html>"},
+	"/bucket1/file.meta.json": {false, interfaces.MetaData, `{"testmeta":"testmeta"}`},
 }
 
 func createFileInWorkspace(workspaceRoot, path string, isDir bool, data string) (bool, error) {
@@ -199,7 +199,7 @@ func TestImportWorkspace(t *testing.T) {
 	for filePath, fileMeta := range tw {
 
 		arr := strings.Split(filePath, "/")
-		ifile, err := dbManager.FindFileByName(arr[1], arr[2], interfaces.FullFile)
+		ifile, err := dbManager.FindFileByName(arr[1], originFileName(arr[2]), interfaces.FullFile)
 		assert.NoError(t, err, "Get must existing file from database %s/%s", arr[1], arr[2])
 
 		assert.NoError(t, testFile(ifile, fileMeta.used, fileMeta.data), "file (%s) data test (%v), %s", filePath, ifile, fileMeta.used)
@@ -221,14 +221,14 @@ func TestImportFsDataFile(t *testing.T) {
 			name string
 			data []byte
 		}{
-			{interfaces.MetaData, MetaDataFileName, []byte(`{"alo":"da"}`)},
-			{interfaces.StructuralData, StructuralDataFileName, []byte(`{"str":"str"}`)},
+			{interfaces.MetaData, getFileName(fileName, interfaces.MetaData), []byte(`{"alo":"da"}`)},
+			{interfaces.StructuralData, getFileName(fileName, interfaces.StructuralData), []byte(`{"str":"str"}`)},
 			{interfaces.RawData, fileName, data},
-			{interfaces.LuaScript, LuaScriptDataFileName, []byte(`-- script`)},
+			{interfaces.LuaScript, getFileName(fileName, interfaces.LuaScript), []byte(`-- script`)},
 		}
 	)
 
-	fPath := filepath.Join(DefaultWorkSpaceName, bucketName, fileName)
+	fPath := filepath.Join(DefaultWorkSpaceName, bucketName)
 	err := os.MkdirAll(fPath, 0777)
 	assert.NoError(t, err, "mkdir for test workspace")
 	for _, v := range uses {
@@ -236,13 +236,13 @@ func TestImportFsDataFile(t *testing.T) {
 		err = ioutil.WriteFile(fP, v.data, FilesPermission)
 		assert.NoError(t, err, "write file (%s)", v.name)
 
-		err = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, fileName, v.name)
+		err = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, v.name)
 		assert.NoError(t, err, "Import data file (%s)", v.name)
 
 		err = os.Remove(fP)
 		assert.NoError(t, err, "Remove data file (%s)", v.name)
 
-		err = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, fileName, v.name)
+		err = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, v.name)
 		assert.NoError(t, err, "Import not existing file (%s)", v.name)
 		if err != nil {
 			panic(err)
@@ -257,12 +257,11 @@ func TestImportFsDataFileData(t *testing.T) {
 
 	var (
 		bucketName = "bucketname"
-		fileName   = "fileName"
 		dataName   = "fileName"
 		data       = []byte("data")
 	)
 
-	err := importFsDataFileData(newDbManager(testDb), bucketName, fileName, dataName, data)
+	err := importFsDataFileData(newDbManager(testDb), bucketName, dataName, data)
 	assert.NoError(t, err, "import fs data file")
 
 }
@@ -278,7 +277,7 @@ func TestImportNewFile(t *testing.T) {
 		testdata   = "testdata"
 	)
 
-	fileFolder := filepath.Join(DefaultWorkSpaceName, bucketName, fileName)
+	fileFolder := filepath.Join(DefaultWorkSpaceName, bucketName)
 	filePath := filepath.Join(fileFolder, fileName)
 
 	os.Remove(filePath)
@@ -294,7 +293,7 @@ func TestImportNewFile(t *testing.T) {
 	e = ImportFsVirtualFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, fileName)
 	assert.NoError(t, e, "import virtual file")
 
-	e = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, fileName, fileName)
+	e = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, bucketName, fileName)
 	assert.Nil(t, e, eToStr(e))
 
 	db := newDbManager(testDb)
@@ -322,7 +321,7 @@ func TestImportExistingFile(t *testing.T) {
 		fileName = "profile.html"
 	)
 
-	fileFolder := filepath.Join(DefaultWorkSpaceName, "ex1", fileName)
+	fileFolder := filepath.Join(DefaultWorkSpaceName, "ex1")
 	filePath := filepath.Join(fileFolder, fileName)
 
 	os.Remove(filePath)
@@ -334,7 +333,7 @@ func TestImportExistingFile(t *testing.T) {
 	_, e = f.WriteString("testdata")
 	assert.Nil(t, e)
 
-	e = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, "ex1", fileName, fileName)
+	e = ImportFsDataFile(newDbManager(testDb), DefaultWorkSpaceName, "ex1", fileName)
 	assert.Nil(t, e, eToStr(e))
 
 	db := newDbManager(testDb)
