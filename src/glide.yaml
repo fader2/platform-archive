@@ -1,12 +1,15 @@
 package: .
 
 ignore:
-- fs
+- addons
+- api
 - cmd
-- store
-- interfaces
 - config
 - fader
+- fs
+- interfaces
+- store
+- synchronizer
 
 import:
 - package: github.com/BurntSushi/toml
@@ -16,7 +19,12 @@ import:
 - package: gopkg.in/fsnotify.v1
 - package: golang.org/x/sys/...
 - package: github.com/SentimensRG/sigctx
+- package: github.com/flosch/pongo2-addons
+- package: github.com/flosch/pongo2
+- package: github.com/dgrijalva/jwt-go
 - package: github.com/urfave/cli
+- package: github.com/tylerb/graceful
+- package: github.com/yuin/gopher-lua
 - package: github.com/labstack/echo
   version: v2.2.0
   subpackages:
