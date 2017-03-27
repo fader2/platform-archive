@@ -23,20 +23,7 @@ var exports = map[string]lua.LGFunction{
 	// file manager
 	"FindFileByName": func(L *lua.LState) int { return 0 },
 	"FindFile":       basicFn_FindFile,
-	"CreateFile": func(L *lua.LState) int {
-		file := checkFile(L)
-
-		err := fileManager.CreateFile(file.File)
-
-		if err != nil {
-			L.RaiseError("create file %s, err %s", file.FileID, err)
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		L.Push(lua.LBool(true))
-		return 1
-	},
+	"CreateFile":     basicFn_CreateFile,
 	"CreateFileFrom": func(L *lua.LState) int { return 0 },
 	"UpdateFileFrom": func(L *lua.LState) int {
 		file := checkFile(L)
@@ -156,6 +143,7 @@ func checkDataUsed(L *lua.LState) interfaces.DataUsed {
 	if v, ok := ud.Value.(interfaces.DataUsed); ok {
 		return v
 	}
+	// todo unreacheble code
 	L.ArgError(1, "interfaces.DataUsed expected")
 	return interfaces.DataUsed(0)
 }
@@ -1145,6 +1133,21 @@ func basicFn_InMemoryDel(L *lua.LState) int {
 			"InMemoryDel: error deleting, %s",
 			err,
 		)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	L.Push(lua.LBool(true))
+	return 1
+}
+
+func basicFn_CreateFile(L *lua.LState) int {
+	file := checkFile(L)
+
+	err := fileManager.CreateFile(file.File)
+
+	if err != nil {
+		L.RaiseError("create file %s, err %s", file.FileID, err)
 		L.Push(lua.LBool(false))
 		return 1
 	}

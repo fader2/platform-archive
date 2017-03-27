@@ -144,7 +144,7 @@ vvv:Add(std.PrimaryNamesData)
 std.check(vvv)
 `) // from loaded file
 	assert.NoError(t, err)
-	t.Logf("%v", ctx.Value)
+	t.Logf("user data: %v", ctx.Value.(int))
 }
 
 // TestContext_basicTypes

@@ -195,6 +195,8 @@ func (a *AddonBasic) LuaLoader(L *lua.LState) int {
 		log.Println("RawData", v&interfaces.RawData != 0)
 		log.Println("BucketStoreNames", v&interfaces.BucketStoreNames != 0)
 
+		log.Println("NIL", v == interfaces.DataUsed(0))
+
 		return 0
 	}))
 
