@@ -21,27 +21,11 @@ var exports = map[string]lua.LGFunction{
 	"ListFilesByBucketID": basicFn_listFilesFromBucketID,
 
 	// file manager
-	"FindFileByName": func(L *lua.LState) int { return 0 },
+	"FindFileByName": basicFn_FindFileByName,
 	"FindFile":       basicFn_FindFile,
 	"CreateFile":     basicFn_CreateFile,
-	"CreateFileFrom": func(L *lua.LState) int { return 0 },
-	"UpdateFileFrom": func(L *lua.LState) int {
-		file := checkFile(L)
-		mode := L.CheckUserData(2).Value.(interfaces.DataUsed)
-
-		err := fileManager.UpdateFileFrom(file.File, mode)
-
-		log.Printf("update file %s, name %s, mode %v", file.FileID, file.FileName, mode)
-
-		if err != nil {
-			L.RaiseError("update file %s, err %s", file.FileID, err)
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		L.Push(lua.LBool(true))
-		return 1
-	},
+	"CreateFileFrom": basicFn_CreateFileFrom,
+	"UpdateFileFrom": basicFn_UpdateFileFrom,
 	"DeleteFile": func(L *lua.LState) int {
 		var id uuid.UUID
 
@@ -646,6 +630,7 @@ var fileMethods = map[string]lua.LGFunction{
 		}
 
 		file := checkFile(L)
+		fmt.Println("Set raw data", L.CheckString(2))
 		file.RawData = []byte(L.CheckString(2))
 		return 0
 	},
@@ -951,13 +936,21 @@ func basicFn_FindFileByName(L *lua.LState) int {
 		bucketName, fileName string,
 		used DataUsed,
 	*/
-	// var bucketName, fileName string
+	var bucketName, fileName string
+	// todo
 	// var used interfaces.DataUsed
 
-	// bucketName = L.CheckString(2)
-	// fileName = L.CheckString(3)
+	bucketName = L.CheckString(1)
+	fileName = L.CheckString(2)
+	fmt.Println("Find file by name", bucketName, fileName)
 
-	return 0
+	file, err := fileManager.FindFileByName(bucketName, fileName, interfaces.FullFile)
+	if err != nil {
+		L.RaiseError("FindFile: find file by name %s, err %s", fileName, err)
+		return 0
+	}
+
+	return newLuaFile(file)(L)
 }
 
 func basicFn_FindFile(L *lua.LState) int {
@@ -1011,11 +1004,37 @@ func basicFn_FindFile(L *lua.LState) int {
 }
 
 func basicFn_CreateFileFrom(L *lua.LState) int {
-	return 0
+	file := checkFile(L)
+
+	mode := L.CheckUserData(2).Value.(interfaces.DataUsed)
+
+	err := fileManager.CreateFileFrom(file.File, mode)
+	if err != nil {
+		L.RaiseError("create file %s, err %s", file.FileID, err)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	L.Push(lua.LBool(true))
+	return 1
 }
 
 func basicFn_UpdateFileFrom(L *lua.LState) int {
-	return 0
+	file := checkFile(L)
+	mode := L.CheckUserData(2).Value.(interfaces.DataUsed)
+
+	err := fileManager.UpdateFileFrom(file.File, mode)
+
+	log.Printf("update file %s, name %s, mode %v", file.FileID, file.FileName, mode)
+
+	if err != nil {
+		L.RaiseError("update file %s, err %s", file.FileID, err)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	L.Push(lua.LBool(true))
+	return 1
 }
 
 func basicFn_DeleteFile(L *lua.LState) int {

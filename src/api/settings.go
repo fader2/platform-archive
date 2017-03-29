@@ -17,7 +17,7 @@ var (
 	DefaultWorkspacePath = "FaderWorkspace"
 
 	// DefaultTimeoutFileProvider timeout handler of load file
-	DefaultTimeoutFileProvider = time.Millisecond * 100
+	DefaultTimeoutFileProvider = time.Millisecond * 1000
 )
 
 // config

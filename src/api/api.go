@@ -55,44 +55,10 @@ func Setup(e *echo.Echo, _settings *Settings) error {
 	logger = log.New(os.Stderr, "[api]", 1)
 	logger.Printf("init... % v\n", settings)
 
-	// Database ---------------------------------------------------------------
-	var err error
-	db, err = bolt.Open(settings.DatabasePath, 0600, &bolt.Options{
-		Timeout: 1 * time.Second,
-	})
-
+	err := setupDb(settings)
 	if err != nil {
-		logger.Println("[ERR] setup database ", err)
 		return err
 	}
-
-	// Sys components -------------------------------------------------------------
-
-	bucketManager = boltdb.NewBucketManager(db)
-	fileManager = boltdb.NewFileManager(db)
-	inMemStore = NewInMemoryStore(db)
-
-	dbManager = struct {
-		interfaces.FileManager
-		interfaces.FileImportManager
-		interfaces.BucketManager
-		interfaces.BucketImportManager
-	}{
-		fileManager,
-		fileManager.(*boltdb.FileManager),
-		bucketManager,
-		bucketManager.(*boltdb.BucketManager),
-	}
-
-	dbManager.EachFile(func(b *interfaces.File) error {
-		logger.Println("[File Bucket]", b.FileName)
-		return nil
-	})
-
-	dbManager.EachBucket(func(b *interfaces.Bucket) error {
-		logger.Println("[Bucket]", b.BucketName, b.BucketID)
-		return nil
-	})
 
 	// put synchromizer and wathcer init here
 
@@ -191,6 +157,48 @@ func Setup(e *echo.Echo, _settings *Settings) error {
 
 	logger.Println("init... done")
 
+	return nil
+}
+
+func setupDb(settings *Settings) error {
+	// Database ---------------------------------------------------------------
+	var err error
+	db, err = bolt.Open(settings.DatabasePath, 0600, &bolt.Options{
+		Timeout: 1 * time.Second,
+	})
+
+	if err != nil {
+		logger.Println("[ERR] setup database ", err)
+		return err
+	}
+
+	// Sys components -------------------------------------------------------------
+
+	bucketManager = boltdb.NewBucketManager(db)
+	fileManager = boltdb.NewFileManager(db)
+	inMemStore = NewInMemoryStore(db)
+
+	dbManager = struct {
+		interfaces.FileManager
+		interfaces.FileImportManager
+		interfaces.BucketManager
+		interfaces.BucketImportManager
+	}{
+		fileManager,
+		fileManager.(*boltdb.FileManager),
+		bucketManager,
+		bucketManager.(*boltdb.BucketManager),
+	}
+
+	/*	dbManager.EachFile(func(b *interfaces.File) error {
+			logger.Println("[File Bucket]", b.FileName)
+			return nil
+		})
+
+		dbManager.EachBucket(func(b *interfaces.Bucket) error {
+			logger.Println("[Bucket]", b.BucketName, b.BucketID)
+			return nil
+		})*/
 	return nil
 }
 

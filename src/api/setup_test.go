@@ -230,8 +230,16 @@ func setupSysConfigFilesCase2() error {
 	bucketSettings.BucketID = uuid.NewV4()
 	bucketSettings.BucketName = configBucketName
 	if err := bucketManager.CreateBucket(bucketSettings); err != nil {
-		logger.Panicln("[FAIL] create bucket", err)
-		return err
+		if err == interfaces.ErrExists {
+			bucketSettings, err = bucketManager.FindBucketByName(configBucketName, interfaces.FullBucket)
+			if err != nil {
+				logger.Panicln("[FAIL] get setting bucket", err)
+				return err
+			}
+		} else {
+			logger.Panicln("[FAIL] create bucket", err)
+			return err
+		}
 	}
 
 	mainConfigFile := interfaces.NewFile()
