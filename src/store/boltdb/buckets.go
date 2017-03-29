@@ -33,12 +33,20 @@ type BucketManager struct {
 func (m *BucketManager) CreateBucket(bucket *interfaces.Bucket) error {
 	return m.CreateBucketFrom(bucket, interfaces.FullBucket)
 }
+
 func (m *BucketManager) CreateBucketFrom(
 	bucket *interfaces.Bucket,
 	used interfaces.DataUsed,
 ) error {
 	bucket.UpdatedAt = time.Now()
 	bucket.CreatedAt = time.Now()
+
+	if has, err := m.hasBucketWithName(bucket.BucketName); err == nil && has {
+		m.logger.Println("[ERR] empty bucket ID")
+		return interfaces.ErrExists
+	} else if err != nil {
+		return err
+	}
 
 	if uuid.Equal(uuid.Nil, bucket.BucketID) {
 		m.logger.Println("[ERR] empty bucket ID")
@@ -485,4 +493,16 @@ func putBucketData(
 	}
 
 	return nil
+}
+
+// todo optimize it with not get data from db, simple check bucket exists
+func (m *BucketManager) hasBucketWithName(name string) (bool, error) {
+	_, err := m.FindBucketByName(name, interfaces.FullBucket)
+	if err == interfaces.ErrNotFound {
+		return false, nil
+	} else if err != nil {
+		return false, nil
+	} else {
+		return true, nil
+	}
 }

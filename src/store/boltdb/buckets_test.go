@@ -203,3 +203,31 @@ func TestBucketManager_findbyname_simple(t *testing.T) {
 	assert.Equal(t, expected.DataStoreName, got.DataStoreName)
 	assert.Equal(t, expected.LuaScript, got.LuaScript)
 }
+
+func TestUniqueBucketNames(t *testing.T) {
+	db, err := bolt.Open("./_testdb.db", 0600, &bolt.Options{
+		Timeout: 1 * time.Second,
+	})
+	defer func() {
+		os.RemoveAll("./_testdb.db")
+	}()
+
+	assert.NoError(t, err)
+	m := NewBucketManager(db)
+
+	buck := &interfaces.Bucket{
+		BucketID:   uuid.NewV4(),
+		BucketName: "testBucket",
+	}
+
+	err = m.CreateBucket(buck)
+	assert.NoError(t, err, "Create bucket")
+
+	newBucket := &interfaces.Bucket{
+		BucketID:   uuid.NewV4(),
+		BucketName: "testBucket",
+	}
+
+	err = m.CreateBucket(newBucket)
+	assert.EqualError(t, err, interfaces.ErrExists.Error(), "same name")
+}
