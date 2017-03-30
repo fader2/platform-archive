@@ -4,6 +4,7 @@ import (
 	"errors"
 	"interfaces"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -55,6 +56,17 @@ func (m *FileManager) CreateFileFrom(
 		m.logger.Println("[ERR] empty bucket ID")
 		return errors.New("empty bucket ID")
 	}
+	if strings.TrimSpace(file.FileName) == "" {
+		m.logger.Println("[ERR] empty file name")
+		return errors.New("empty file name")
+	}
+
+	// check is names unique
+	if has, err := hasFileWithName(m, file.BucketID, file.FileName); has {
+		return interfaces.ErrExists
+	} else if err != nil && err != interfaces.ErrNotFound {
+		return err
+	}
 
 	err := m.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(DefaultBucketName_FileIDs))
@@ -62,7 +74,7 @@ func (m *FileManager) CreateFileFrom(
 		superID := make([]byte, 17)
 		copy(superID, file.FileID.Bytes())
 
-		if used&interfaces.PrimaryIDsData != 0 {
+		{
 			data, err := msgpack.Marshal(
 				file.FileID,
 				file.BucketID,
@@ -78,7 +90,7 @@ func (m *FileManager) CreateFileFrom(
 			}
 		}
 
-		if used&interfaces.PrimaryNamesData != 0 {
+		{
 			data, err := msgpack.Marshal(
 				file.FileName,
 			)
@@ -93,8 +105,7 @@ func (m *FileManager) CreateFileFrom(
 			}
 		}
 
-		if used&interfaces.PrimaryIDsData != 0 &&
-			used&interfaces.PrimaryNamesData != 0 {
+		{
 			bucketFromNames := tx.Bucket([]byte(DefaultBucketName_FileNames))
 
 			var relatedInfo = make([]byte, 16*2)
@@ -288,6 +299,10 @@ func (m *FileManager) FindFile(
 			&file.FileID,
 			&file.BucketID,
 		)
+
+		if used == interfaces.PrimaryIDsData {
+			return nil
+		}
 
 		if err != nil {
 			m.logger.Println("[ERR] unmarshal PrimaryIDsData data,", err)
@@ -625,4 +640,15 @@ func putFileData(
 	}
 
 	return nil
+}
+
+func (m *FileManager) hasFileWithName(bucketName, fileName string) (bool, error) {
+	file, err := m.FindFileByName(bucketName, fileName, interfaces.PrimaryIDsData)
+	if err == nil && !uuid.Equal(uuid.Nil, file.FileID) {
+		return true, nil
+	} else if err == interfaces.ErrNotFound {
+		return false, nil
+	} else {
+		return false, err
+	}
 }
