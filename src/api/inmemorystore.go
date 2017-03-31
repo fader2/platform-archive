@@ -6,11 +6,11 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-var InMomryStoreBucketName = []byte("InMemoryStore")
+var InMemoryStoreBucketName = []byte("InMemoryStore")
 
 func NewInMemoryStore(db *bolt.DB) *InMemoryStore {
 	db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists(InMomryStoreBucketName)
+		_, err := tx.CreateBucketIfNotExists(InMemoryStoreBucketName)
 		return err
 	})
 
@@ -35,7 +35,7 @@ func (s *InMemoryStore) Set(
 	logger.Println("InMemoryStore: set, length data", len(data))
 
 	return s.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(InMomryStoreBucketName)
+		b := tx.Bucket(InMemoryStoreBucketName)
 		return b.Put([]byte(key), data)
 	})
 }
@@ -46,7 +46,7 @@ func (s *InMemoryStore) Get(
 ) error {
 	var data []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(InMomryStoreBucketName)
+		b := tx.Bucket(InMemoryStoreBucketName)
 		data = b.Get([]byte(key))
 		return nil
 	})
@@ -68,7 +68,7 @@ func (s *InMemoryStore) Del(
 	key string,
 ) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(InMomryStoreBucketName)
+		b := tx.Bucket(InMemoryStoreBucketName)
 		return b.Delete([]byte(key))
 	})
 }

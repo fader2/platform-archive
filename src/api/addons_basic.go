@@ -183,7 +183,7 @@ func (a *AddonBasic) LuaLoader(L *lua.LState) int {
 	)
 
 	L.SetField(mod, "check", L.NewFunction(func(L *lua.LState) int {
-		v := checkDataUsed(L)
+		v := checkDataUsed(L, 1)
 		log.Println("PrimaryIDsData", v&interfaces.PrimaryIDsData != 0)
 		log.Println("PrimaryNamesData", v&interfaces.PrimaryNamesData != 0)
 		log.Println("ContentTypeData", v&interfaces.ContentTypeData != 0)
