@@ -148,7 +148,7 @@ func getDownloadLink(remote string) (string, error) {
 	}
 	// todo
 	// https://github.com/ZloDeeV/gpsgame-android/archive/master.zip
-	if u.Hostname() == "github.com" {
+	if u.Host == "github.com" {
 		return remote + "/archive/master.zip", nil
 	}
 	return "", nil
