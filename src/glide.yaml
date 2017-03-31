@@ -1,28 +1,188 @@
 package: .
-
-ignore:
-- fs
-- cmd
-- store
-- interfaces
-- config
-- fader
-
 import:
 - package: github.com/BurntSushi/toml
-- package: gopkg.in/vmihailenco/msgpack.v2
+- package: github.com/GeertJohan/go.rice
 - package: github.com/boltdb/bolt
-- package: github.com/satori/go.uuid
-- package: gopkg.in/fsnotify.v1
-- package: golang.org/x/sys/...
-- package: github.com/SentimensRG/sigctx
-- package: github.com/urfave/cli
-- package: github.com/labstack/echo
-  version: v2.2.0
+- package: github.com/davecgh/go-spew
   subpackages:
+  - spew
+- package: github.com/dgrijalva/jwt-go
+- package: github.com/extemporalgenome/slug
+- package: github.com/facebookgo/grace
+  subpackages:
+  - gracehttp
+- package: github.com/flosch/go-humanize
+- package: github.com/flosch/pongo2
+- package: github.com/flosch/pongo2-addons
+- package: github.com/golang/protobuf
+  subpackages:
+  - proto
+  - proto/testdata
+  - protoc-gen-go/descriptor
+  - protoc-gen-go/generator
+  - protoc-gen-go/grpc
+  - protoc-gen-go/plugin
+  - ptypes/any
+  - ptypes/duration
+  - ptypes/struct
+  - ptypes/timestamp
+  - ptypes/wrappers
+- package: github.com/gorilla/websocket
+- package: github.com/juju/errors
+- package: github.com/labstack/echo
+  subpackages:
+  - context
+  - engine
   - engine/standard
+  - log
   - middleware
-testImport:
+- package: github.com/labstack/gommon
+  subpackages:
+  - bytes
+  - color
+  - log
+  - random
+- package: github.com/mattn/go-colorable
+- package: github.com/mattn/go-isatty
+- package: github.com/pmezard/go-difflib
+  subpackages:
+  - difflib
+- package: github.com/russross/blackfriday
+- package: github.com/satori/go.uuid
+- package: github.com/shurcooL/sanitized_anchor_name
+- package: github.com/stretchr/objx
 - package: github.com/stretchr/testify
   subpackages:
   - assert
+  - http
+  - mock
+  - require
+- package: github.com/tylerb/graceful
+- package: github.com/urfave/cli
+- package: github.com/urfave/negroni
+- package: github.com/valyala/bytebufferpool
+- package: github.com/valyala/fasthttp
+- package: github.com/valyala/fasttemplate
+- package: github.com/yuin/gopher-lua
+  subpackages:
+  - ast
+  - parse
+  - pm
+- package: go4.org
+  subpackages:
+  - syncutil/singleflight
+- package: golang.org/x/crypto
+  subpackages:
+  - acme/autocert
+  - ssh/terminal
+- package: golang.org/x/net
+  subpackages:
+  - bpf
+  - context
+  - html
+  - html/atom
+  - http2
+  - http2/hpack
+  - idna
+  - internal/iana
+  - internal/netreflect
+  - internal/timeseries
+  - ipv4
+  - ipv6
+  - lex/httplex
+  - webdav/internal/xml
+  - websocket
+- package: golang.org/x/oauth2
+  subpackages:
+  - google
+- package: golang.org/x/sys
+  subpackages:
+  - unix
+  - windows
+  - windows/registry
+  - windows/svc
+  - windows/svc/debug
+  - windows/svc/eventlog
+  - windows/svc/mgr
+- package: golang.org/x/text
+  subpackages:
+  - cases
+  - collate
+  - encoding
+  - encoding/charmap
+  - encoding/htmlindex
+  - encoding/internal
+  - encoding/internal/identifier
+  - encoding/japanese
+  - encoding/korean
+  - encoding/simplifiedchinese
+  - encoding/traditionalchinese
+  - encoding/unicode
+  - internal
+  - internal/colltab
+  - internal/format
+  - internal/format/plural
+  - internal/gen
+  - internal/stringset
+  - internal/tag
+  - internal/utf8internal
+  - language
+  - runes
+  - secure/bidirule
+  - transform
+  - unicode/bidi
+  - unicode/cldr
+  - unicode/norm
+  - width
+- package: golang.org/x/tools
+  subpackages:
+  - go/buildutil
+  - go/loader
+- package: google.golang.org/api
+  subpackages:
+  - compute/v1
+- package: google.golang.org/appengine
+  subpackages:
+  - datastore
+  - internal
+  - internal/app_identity
+  - internal/base
+  - internal/blobstore
+  - internal/capability
+  - internal/channel
+  - internal/datastore
+  - internal/image
+  - internal/log
+  - internal/mail
+  - internal/memcache
+  - internal/modules
+  - internal/remote_api
+  - internal/search
+  - internal/socket
+  - internal/system
+  - internal/taskqueue
+  - internal/urlfetch
+  - internal/user
+  - internal/xmpp
+  - log
+  - taskqueue
+  - user
+- package: google.golang.org/genproto
+  subpackages:
+  - protobuf
+- package: gopkg.in/fsnotify.v1
+- package: gopkg.in/tylerb/graceful.v1
+- package: gopkg.in/urfave/cli.v1
+- package: gopkg.in/vmihailenco/msgpack.v2
+  subpackages:
+  - codes
+- package: gopkg.in/yaml.v2
+testImport:
+- package: github.com/fsnotify/fsnotify
+- package: github.com/juju/testing
+  subpackages:
+  - checkers
+- package: golang.org/x/sync
+  subpackages:
+  - errgroup
+- package: gopkg.in/check.v1
