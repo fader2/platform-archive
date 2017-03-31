@@ -91,15 +91,6 @@ func Setup(e *echo.Echo, _settings *Settings) error {
 		interfaces.FileWithoutRawData,
 	)
 
-	// todo my
-	logger.Println("[Import 64]", _settings.InitFile)
-	if _settings.InitFile != "" {
-		err := ImportBase64File(_settings.InitFile)
-		if err != nil {
-			logger.Println(err)
-		}
-	}
-
 	// App compoenents ------------------------------------------------
 
 	logger.Println("init... manager routes")

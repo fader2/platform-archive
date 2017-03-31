@@ -5,7 +5,6 @@ import (
 	"interfaces"
 	"io"
 	"log"
-	"time"
 
 	"net/http"
 
@@ -33,8 +32,8 @@ var contextMethods = map[string]lua.LGFunction{
 	"Route": contextRoute,
 	// "Get":        contextMethodGet,
 
-	"AppExport": contextAppExport,
-	"AppImport": contextAppImport,
+	//"AppExport": contextAppExport,
+	//"AppImport": contextAppImport,
 
 	"CurrentFile":    contextGetCurrentFile,
 	"MiddlewareFile": contextGetMiddlewareFile,
@@ -273,75 +272,7 @@ func contextMethodFormFile(L *lua.LState) int {
 ////////////////////////////////////////////////////////////////////////////////
 // import export
 ////////////////////////////////////////////////////////////////////////////////
-
-func contextAppExport(L *lua.LState) int {
-	c := checkContext(L)
-
-	importer := interfaces.NewImportManager(
-		bucketManager,
-		fileManager,
-	)
-
-	data, _ := importer.Export(
-		"vDEV-"+time.Now().String(),
-		"Fader",
-		time.Now().String(),
-	)
-	fileName := "Fader.vDEV-" + time.Now().String() + ".txt"
-
-	buf := bytes.NewReader(data)
-
-	c.Err = c.echoCtx.Attachment(buf, fileName)
-	c.Rendered = true
-
-	return 0
-}
-
-func contextAppImport(L *lua.LState) int {
-	c := checkContext(L)
-
-	importer := interfaces.NewImportManager(
-		bucketManager,
-		fileManager,
-	)
-
-	f, err := c.echoCtx.FormFile("file")
-
-	if err != nil {
-		log.Println("AppImport: ", err)
-		L.Push(lua.LBool(false))
-		return 1
-	}
-
-	of, err := f.Open()
-
-	if err != nil {
-		log.Println("AppImport: open file,", err)
-		L.Push(lua.LBool(false))
-		return 1
-	}
-	defer of.Close()
-
-	buf := &bytes.Buffer{}
-	_, err = io.Copy(buf, of)
-	if err != nil {
-		log.Println("AppImport: io copy,", err)
-		L.Push(lua.LBool(false))
-		return 1
-	}
-
-	info, err := importer.Import(buf.Bytes())
-	if err != nil {
-		log.Println("AppImport: import,", err)
-		L.Push(lua.LBool(false))
-		return 1
-	}
-
-	log.Println("AppImport: success, ", info)
-
-	L.Push(lua.LBool(true))
-	return 1
-}
+//todo add export
 
 func contextGetCurrentFile(L *lua.LState) int {
 	c := checkContext(L)
