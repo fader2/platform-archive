@@ -3,6 +3,7 @@ package boltdb
 import (
 	"errors"
 	"interfaces"
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -437,8 +438,11 @@ func getFileData(
 		)
 
 		if err != nil {
-			logger.Println("[ERR] unmarshal data, ContentTypeData", file.FileID)
-			return err
+			// check nil value
+			if err != io.EOF {
+				logger.Println("[ERR] unmarshal data, ContentTypeData", file.FileID)
+				return err
+			}
 		}
 	}
 
@@ -451,8 +455,11 @@ func getFileData(
 		)
 
 		if err != nil {
-			logger.Println("[ERR] unmarshal data, OwnersData", file.FileID)
-			return err
+			// check nil value
+			if err != io.EOF {
+				logger.Println("[ERR] unmarshal data, OwnersData", file.FileID)
+				return err
+			}
 		}
 	}
 
@@ -466,8 +473,10 @@ func getFileData(
 		)
 
 		if err != nil {
-			logger.Println("[ERR] unmarshal data, AccessStatusData", file.FileID)
-			return err
+			if err != io.EOF {
+				logger.Println("[ERR] unmarshal data, AccessStatusData", file.FileID)
+				return err
+			}
 		}
 	}
 
@@ -485,8 +494,10 @@ func getFileData(
 		)
 
 		if err != nil {
-			logger.Println("[ERR] unmarshal data, MetaData", file.FileID)
-			return err
+			if err != io.EOF {
+				logger.Println("[ERR] unmarshal data, MetaData", file.FileID)
+				return err
+			}
 		}
 	}
 
@@ -499,8 +510,10 @@ func getFileData(
 		)
 
 		if err != nil {
-			logger.Println("[ERR] unmarshal data, StructuralData", file.FileID)
-			return err
+			if err != io.EOF {
+				logger.Println("[ERR] unmarshal data, StructuralData", file.FileID)
+				return err
+			}
 		}
 	}
 
