@@ -190,6 +190,65 @@ func (m *BucketManager) UpdateBucket(
 	return err
 }
 
+func (m *BucketManager) DeleteBucket(name string) error {
+	bucket, err := m.FindBucketByName(name, interfaces.FullBucket)
+	if err != nil {
+		return err
+	}
+	fileManager := NewFileManager(m.db)
+
+	err = fileManager.EachFile(func(file *interfaces.File) error {
+		return fileManager.DeleteFile(file.FileID)
+	})
+	if err != nil {
+		return err
+	}
+
+	//SHA1(bucket.BucketName)
+
+	var useds = []byte{
+		PrimaryIDsData,
+		PrimaryNamesData,
+		CreatedAtData,
+		UpdatedAtData,
+		OwnersData,
+		LuaScript,
+		MetaData,
+		StructuralData,
+		RawData,
+		BucketStoreNames,
+	}
+
+	err = m.db.Update(func(tx *bolt.Tx) error {
+		//delete primary names
+		bucketFromNames := tx.Bucket([]byte(DefaultBucketName_BucektNames))
+
+		if err := bucketFromNames.Delete(SHA1(bucket.BucketName)); err != nil {
+			m.logger.Println("[ERR] delete referance ID", bucket.BucketID)
+			return err
+		}
+
+		_bucket := tx.Bucket([]byte(DefaultBucketName_BucketIDs))
+
+		superID := make([]byte, 17)
+		copy(superID, bucket.BucketID.Bytes())
+
+		for _, used := range useds {
+			superID[16] = used
+			if err := _bucket.Delete(superID); err != nil {
+				m.logger.Println("[ERR] delete referance ID (%s)", bucket.BucketID, used)
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *BucketManager) FindBucketByName(
 	name string,
 	used interfaces.DataUsed,

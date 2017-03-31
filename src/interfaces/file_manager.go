@@ -73,6 +73,7 @@ type BucketManager interface {
 
 	CreateBucket(*Bucket) error
 	CreateBucketFrom(*Bucket, DataUsed) error
+	DeleteBucket(name string) error
 	UpdateBucket(*Bucket, DataUsed) error
 }
 
