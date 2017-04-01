@@ -61,6 +61,7 @@ newFile = File:new()
 newFile:SetBucketID(bucket_id)
 newFile:SetFileName("testFile")
 
+
 ok = std.CreateFile(newFile)
 
 id = newFile:FileID()
@@ -109,6 +110,7 @@ newFile = File:new()
 newFile:SetBucketID(bucket_id)
 newFile:SetFileName("` + fileName + `")
 newFile:SetRawData("alo")
+newFile:SetContentType("text")
 
 used = std.RawData
 

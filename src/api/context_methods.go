@@ -5,8 +5,8 @@ import (
 	"interfaces"
 	"io"
 	"log"
-
 	"net/http"
+	"synchronizer"
 
 	"bytes"
 
@@ -32,7 +32,7 @@ var contextMethods = map[string]lua.LGFunction{
 	"Route": contextRoute,
 	// "Get":        contextMethodGet,
 
-	//"AppExport": contextAppExport,
+	"AppExport": contextExport,
 	//"AppImport": contextAppImport,
 
 	"CurrentFile":    contextGetCurrentFile,
@@ -273,6 +273,15 @@ func contextMethodFormFile(L *lua.LState) int {
 // import export
 ////////////////////////////////////////////////////////////////////////////////
 //todo add export
+
+func contextExport(L *lua.LState) int {
+	err := synchronizer.Export(dbManager, L.CheckString(2))
+	if err != nil {
+		L.RaiseError("[LUA ERR] %s", err)
+		return 0
+	}
+	return 1
+}
 
 func contextGetCurrentFile(L *lua.LState) int {
 	c := checkContext(L)
