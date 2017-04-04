@@ -104,7 +104,6 @@ func getBuckets(bm DbManager) (map[string]*interfaces.Bucket, error) {
 
 func makeExportFileFunc(fileManager DbManager, buckets map[string]*interfaces.Bucket, targetWorkspace string, isZip bool, zipFile *zip.Writer) func(*interfaces.File) error {
 	return func(file *interfaces.File) (err error) {
-
 		if file == nil {
 			return fmt.Errorf("file is nil")
 		}
