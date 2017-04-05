@@ -30,7 +30,7 @@ import:
 - package: github.com/gorilla/websocket
 - package: github.com/juju/errors
 - package: github.com/labstack/echo
-  version: ~2
+  version: bc173df6ba59e1ee2378b3d68b7ff6d6b8abe742
   subpackages:
   - context
   - engine
