@@ -300,7 +300,6 @@ func (m *FileManager) FindFile(
 			&file.FileID,
 			&file.BucketID,
 		)
-
 		if used == interfaces.PrimaryIDsData {
 			return nil
 		}
