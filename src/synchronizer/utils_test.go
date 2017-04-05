@@ -1,12 +1,8 @@
 package synchronizer
 
 import (
-	"github.com/boltdb/bolt"
 	"github.com/stretchr/testify/assert"
-	"interfaces"
-	bdb "store/boltdb"
 	"testing"
-	"time"
 )
 
 /*func TestUtils(t *testing.T) {
