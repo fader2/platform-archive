@@ -194,5 +194,5 @@ func setupDb(settings *Settings) error {
 }
 
 func ImportWorkspace(path string) error {
-	return synchronizer.ImportWorkspace(dbManager, path)
+	return synchronizer.ImportWorkspace(dbManager, path, NewVersionChecker())
 }

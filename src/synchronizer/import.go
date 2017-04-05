@@ -15,7 +15,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func ImportWorkspace(db DbManager, workspaceRoot string) error {
+func ImportWorkspace(db DbManager, workspaceRoot string, checkers ...VersionChecker) error {
 
 	if strings.HasPrefix(workspaceRoot, "https://") {
 		return ImportRemote(db, workspaceRoot)
@@ -23,6 +23,19 @@ func ImportWorkspace(db DbManager, workspaceRoot string) error {
 
 	if strings.HasSuffix(workspaceRoot, ".zip") {
 		return ImportWorkspaceZip(db, workspaceRoot)
+	}
+
+	/* check version here */
+	if len(checkers) > 0 && checkers[0] != nil {
+		vf, err := os.OpenFile(checkers[0].FileName(), os.O_RDONLY, 0777)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		defer vf.Close()
+		err = checkers[0].Check(vf)
+		if err != nil {
+			return err
+		}
 	}
 
 	buckets, err := ioutil.ReadDir(workspaceRoot)
@@ -40,7 +53,7 @@ func ImportWorkspace(db DbManager, workspaceRoot string) error {
 	return nil
 }
 
-func ImportRemote(db DbManager, remote string) error {
+func ImportRemote(db DbManager, remote string, checkers ...VersionChecker) error {
 	ur, err := getDownloadLink(remote)
 	if err != nil {
 		return err
@@ -58,10 +71,10 @@ func ImportRemote(db DbManager, remote string) error {
 	if err != nil {
 		return err
 	}
-	return ImportWorkspaceZip(db, tmpFile.Name())
+	return ImportWorkspaceZip(db, tmpFile.Name(), checkers...)
 }
 
-func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
+func ImportWorkspaceZip(db DbManager, workspaceRoot string, checkers ...VersionChecker) error {
 
 	var (
 		buckets = make(map[string]*interfaces.Bucket)
@@ -74,13 +87,31 @@ func ImportWorkspaceZip(db DbManager, workspaceRoot string) error {
 	if err != nil {
 		return err
 	}
-
 	defer func() {
 		r.Close()
 	}()
 
 	if isGithubArchive(r.File) {
 		skip++
+	}
+
+	/* check version here */
+	// todo check to bug if has another file with same checkers[0].FileName() name
+	if len(checkers) > 0 && checkers[0] != nil {
+		for _, f := range r.File {
+			if _, fileName := filepath.Split(f.Name); fileName == checkers[0].FileName() {
+				rc, err := f.Open()
+				if err != nil {
+					return err
+				}
+				err = checkers[0].Check(rc)
+				rc.Close()
+				if err != nil {
+					return err
+				}
+				break
+			}
+		}
 	}
 
 	for _, f := range r.File {
