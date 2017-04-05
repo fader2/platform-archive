@@ -45,7 +45,8 @@ func TestTree(t *testing.T) {
 	err = tr.Decode(strings.NewReader(buf.String()))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(tr.items))
-	assert.Equal(t, tr.items["a"], item)
+	assert.Equal(t, tr.items["a"].Path, item.Path)
+	assert.Equal(t, tr.items["a"].Hash, item.Hash)
 }
 
 func TestWatcher(t *testing.T) {
