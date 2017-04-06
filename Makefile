@@ -21,6 +21,10 @@ import:
 		go run src/cmd/platform/*.go import -input=file.zip
 .PHONY: test
 
+export:
+	GOPATH=${PWD} \
+		go run src/cmd/platform/*.go export -output=export.zip 
+
 import64:
 	GOPATH=${PWD} \
 		go run src/cmd/platform/*.go import64 -input=_fader2.setup.txt
