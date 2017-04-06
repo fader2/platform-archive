@@ -196,3 +196,7 @@ func setupDb(settings *Settings) error {
 func ImportWorkspace(path string) error {
 	return synchronizer.ImportWorkspace(dbManager, path, NewVersionChecker())
 }
+
+func ExportWorkspace(target string) error {
+	return synchronizer.Export(dbManager, target, NewVersionChecker())
+}

@@ -9,10 +9,6 @@ import (
 	"os"
 )
 
-var (
-	PackagesFileName = "packages.toml"
-)
-
 func SetupAddons() error {
 	addons.Addons[example.NAME] = example.NewAddon()
 	addons.Addons[ADDONS_BASIC_NAME] = NewBasicAddon()
@@ -48,7 +44,7 @@ func CheckCompatibility(fpath string) error {
 }
 
 func CheckCompatibilityFromReader(rdr io.Reader) error {
-	var as addonsSetting
+	var as = addonsSetting{Addons: make(map[string]string)}
 	_, err := toml.DecodeReader(rdr, &as)
 	if err != nil {
 		return err
@@ -79,5 +75,25 @@ func (vc *versionChecker) Check(rdr io.Reader) error {
 }
 
 func (vc *versionChecker) FileName() string {
-	return PackagesFileName
+	return DefaultPackageFileName
+}
+
+// todo move this method from here
+func (vc *versionChecker) WritePackageInfo(w io.Writer) error {
+	sttngs := addonsSetting{Addons: make(map[string]string)}
+	for _, v := range addons.Addons {
+		sttngs.Addons[v.Name()] = v.Version()
+	}
+	sttngs.Addons[DefaultAppName] = VERSION
+
+	wr := toml.NewEncoder(w)
+	err := wr.Encode(sttngs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (vc *versionChecker) PackageFileName() string {
+	return DefaultPackageFileName
 }
