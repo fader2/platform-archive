@@ -63,13 +63,13 @@ func Export(
 	if len(checkers) > 0 && checkers[0] != nil {
 		var wr io.Writer
 		if isZip {
-			zwr, err := zipFile.Create(checkers[0].PackageFileName())
+			zwr, err := zipFile.Create(checkers[0].FileName())
 			if err != nil {
 				return err
 			}
 			wr = zwr
 		} else {
-			f, err := os.OpenFile(filepath.Join(targetPath, checkers[0].PackageFileName()), os.O_CREATE|os.O_WRONLY, FilesPermission)
+			f, err := os.OpenFile(filepath.Join(targetPath, checkers[0].FileName()), os.O_CREATE|os.O_WRONLY, FilesPermission)
 			if err != nil {
 				return err
 			}

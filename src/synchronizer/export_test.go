@@ -2,9 +2,13 @@ package synchronizer
 
 import (
 	"archive/zip"
+	"fmt"
+	"github.com/BurntSushi/toml"
 	"github.com/boltdb/bolt"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"io/ioutil"
+	"reflect"
 	//"os"
 	"testing"
 	"time"
@@ -36,19 +40,51 @@ func TestZipExport(t *testing.T) {
 	err = ImportWorkspace(manager, exWorkSpace)
 	assert.NoError(t, err, "Import test workspace")
 
-	err = Export(manager, target)
+	/*setup version checker*/
+	addons := map[string]string{
+		"fader":   "0.0.1",
+		"basic":   "0.1",
+		"example": "0.1",
+	}
+	checker := func(r io.Reader) error {
+		var sttngs = DefaultVersionChecker{}
+		_, err := toml.DecodeReader(r, &sttngs)
+		if err != nil {
+			return err
+		}
+		if reflect.DeepEqual(addons, sttngs.Addons) {
+			return nil
+		} else {
+			return fmt.Errorf("Error verison")
+		}
+	}
+	vc := NewVersionChecker(addons, checker)
+
+	err = Export(manager, target, vc)
 	assert.NoError(t, err, "Export test workspace to zip file")
 
 	zRdr, err := zip.OpenReader(target)
 	assert.NoError(t, err, "Open exported zip file")
+	defer zRdr.Close()
 
 	for _, file := range zRdr.File {
 
 		_, has := tw["/"+file.Name]
-		assert.Equal(t, true, has, "has file in zip file (%s)", file.Name)
+		if file.Name != "package.toml" {
+			assert.Equal(t, true, has, "has file in zip file (%s)", file.Name)
+		}
 	}
-	t.Log(tw)
 
+	var hasPackageFile bool
+	const faderPackageFileName = "package.toml"
+
+	for _, file := range zRdr.File {
+		if file.Name == faderPackageFileName {
+			hasPackageFile = true
+		}
+	}
+
+	assert.True(t, hasPackageFile, "has version file")
 }
 
 func TestExport(t *testing.T) {
