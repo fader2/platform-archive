@@ -1,4 +1,16 @@
 package: .
+
+ignore:
+- addons
+- api
+- cmd
+- config
+- fader
+- fs
+- interfaces
+- store
+- synchronizer
+
 import:
 - package: github.com/BurntSushi/toml
 - package: github.com/GeertJohan/go.rice
