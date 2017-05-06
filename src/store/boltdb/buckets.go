@@ -33,12 +33,20 @@ type BucketManager struct {
 func (m *BucketManager) CreateBucket(bucket *interfaces.Bucket) error {
 	return m.CreateBucketFrom(bucket, interfaces.FullBucket)
 }
+
 func (m *BucketManager) CreateBucketFrom(
 	bucket *interfaces.Bucket,
 	used interfaces.DataUsed,
 ) error {
 	bucket.UpdatedAt = time.Now()
 	bucket.CreatedAt = time.Now()
+
+	if has, err := m.hasBucketWithName(bucket.BucketName); err == nil && has {
+		m.logger.Println("[ERR] empty bucket ID")
+		return interfaces.ErrExists
+	} else if err != nil {
+		return err
+	}
 
 	if uuid.Equal(uuid.Nil, bucket.BucketID) {
 		m.logger.Println("[ERR] empty bucket ID")
@@ -180,6 +188,65 @@ func (m *BucketManager) UpdateBucket(
 	})
 
 	return err
+}
+
+func (m *BucketManager) DeleteBucket(name string) error {
+	bucket, err := m.FindBucketByName(name, interfaces.FullBucket)
+	if err != nil {
+		return err
+	}
+	fileManager := NewFileManager(m.db)
+
+	err = fileManager.EachFile(func(file *interfaces.File) error {
+		return fileManager.DeleteFile(file.FileID)
+	})
+	if err != nil {
+		return err
+	}
+
+	//SHA1(bucket.BucketName)
+
+	var useds = []byte{
+		PrimaryIDsData,
+		PrimaryNamesData,
+		CreatedAtData,
+		UpdatedAtData,
+		OwnersData,
+		LuaScript,
+		MetaData,
+		StructuralData,
+		RawData,
+		BucketStoreNames,
+	}
+
+	err = m.db.Update(func(tx *bolt.Tx) error {
+		//delete primary names
+		bucketFromNames := tx.Bucket([]byte(DefaultBucketName_BucektNames))
+
+		if err := bucketFromNames.Delete(SHA1(bucket.BucketName)); err != nil {
+			m.logger.Println("[ERR] delete referance ID", bucket.BucketID)
+			return err
+		}
+
+		_bucket := tx.Bucket([]byte(DefaultBucketName_BucketIDs))
+
+		superID := make([]byte, 17)
+		copy(superID, bucket.BucketID.Bytes())
+
+		for _, used := range useds {
+			superID[16] = used
+			if err := _bucket.Delete(superID); err != nil {
+				m.logger.Println("[ERR] delete referance ID (%s)", bucket.BucketID, used)
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m *BucketManager) FindBucketByName(
@@ -485,4 +552,16 @@ func putBucketData(
 	}
 
 	return nil
+}
+
+// todo optimize it with not get data from db, simple check bucket exists
+func (m *BucketManager) hasBucketWithName(name string) (bool, error) {
+	_, err := m.FindBucketByName(name, interfaces.FullBucket)
+	if err == interfaces.ErrNotFound {
+		return false, nil
+	} else if err != nil {
+		return false, nil
+	} else {
+		return true, nil
+	}
 }

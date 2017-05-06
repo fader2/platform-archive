@@ -13,7 +13,7 @@ func main() {
 		Commands: []cli.Command{
 			runWeb,
 			importCmd,
-			legacyImportCmd,
+			exportCmd,
 		},
 	}
 	app.Run(os.Args)

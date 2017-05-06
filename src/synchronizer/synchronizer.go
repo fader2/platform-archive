@@ -1,10 +1,8 @@
 package synchronizer
 
 import (
-	"encoding/json"
 	"fmt"
 	"fs"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -32,7 +30,7 @@ type Synchronizer struct {
 	workSpacePath string
 
 	pollFreq time.Duration
-	tree     tree
+	tree     *FSTree
 }
 
 func NewSynchronizer(workSpacePath string, dbManager DbManager) (*Synchronizer, error) {
@@ -91,7 +89,7 @@ func (s *Synchronizer) Init() (err error) {
 
 	treePath := filepath.Join(s.workSpacePath, SyncInfoFileName)
 	if workSpaceHasSyncInfoFile {
-		s.tree = make(tree)
+		s.tree = NewFSTree()
 		f, err := os.OpenFile(treePath, os.O_RDONLY, FilesPermission)
 		if err != nil {
 			return err
@@ -105,7 +103,7 @@ func (s *Synchronizer) Init() (err error) {
 			return err
 		}
 	} else {
-		s.tree, err = newTreeFromFs(s.workSpacePath)
+		s.tree, err = NewFSTreeFromFs(s.workSpacePath)
 		if err != nil {
 			return err
 		}
@@ -185,7 +183,7 @@ func (s *Synchronizer) Watch() error {
 		interval := time.NewTicker(s.pollFreq)
 		for range interval.C {
 			//start := time.Now()
-			current, err := newTreeFromFs(s.workSpacePath)
+			current, err := NewFSTreeFromFs(s.workSpacePath)
 			if err != nil {
 				fmt.Println("[WATCHER ERR]", err)
 				break
@@ -281,142 +279,4 @@ func (s *Synchronizer) handleUpdateOrCreate(name, oldname string) error {
 		}
 	}
 	return nil
-}
-
-/* tree */
-
-type tree map[string]fsItem
-
-type fsItem struct {
-	Path    string
-	Size    int64
-	ModTime time.Time
-	Hash    string
-	IsDir   bool
-}
-
-func newTree() tree {
-	return make(tree)
-}
-
-func newTreeFromFs(root string) (tree, error) {
-	t := make(tree)
-	walcFunc := func(path string, info os.FileInfo, err error) error {
-		if err != nil || info == nil {
-			return nil
-		}
-
-		if info.IsDir() && strings.Contains(path, ".git") {
-			return filepath.SkipDir
-		} else if strings.Contains(path, ".git") {
-			return nil
-		}
-
-		if strings.Contains(path, ".fader_index") {
-			return nil
-		}
-
-		path = strings.TrimPrefix(path, filepath.Join(root, "/"))
-
-		if path == "" {
-			return nil
-		}
-
-		item := fsItem{
-			Path:    path,
-			Size:    info.Size(),
-			ModTime: info.ModTime(),
-			IsDir:   info.IsDir(),
-		}
-		t[path] = item
-		return nil
-	}
-
-	err := filepath.Walk(root, walcFunc)
-	return t, err
-}
-
-func (t tree) Encode(writer io.Writer) error {
-	enc := json.NewEncoder(writer)
-	enc.SetIndent("  ", "  ")
-	err := enc.Encode(t)
-	return err
-}
-
-func (t *tree) Decode(reader io.Reader) error {
-	var tt = *t
-	dec := json.NewDecoder(reader)
-	err := dec.Decode(t)
-	t = &tt
-	return err
-}
-
-func (t *tree) EncodeToFile(path string) error {
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, FilesPermission)
-	if err != nil {
-		return err
-	}
-	err = t.Encode(f)
-	if err != nil {
-		return err
-	}
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-type ops int
-
-const (
-	create = iota + 1
-	unlink
-	rmDir
-	mkDir
-	change
-)
-
-type Op struct {
-	Path string
-	Op   ops
-}
-
-func (prev tree) Calculate(current tree) []Op {
-
-	updates := []Op{}
-
-	// check new files
-	for path, item := range current {
-
-		if strings.HasSuffix(path, SyncInfoFileName) {
-			continue
-		}
-
-		if prevItem, has := prev[path]; !has {
-			if prevItem.IsDir {
-				updates = append(updates, Op{Path: path, Op: mkDir})
-			} else {
-				updates = append(updates, Op{Path: path, Op: create})
-			}
-		} else {
-			// check update file
-			if !item.IsDir && (!item.ModTime.Equal(prevItem.ModTime) || item.Size != prevItem.Size) {
-				updates = append(updates, Op{Path: path, Op: change})
-			}
-		}
-	}
-
-	// check deletes
-	for path, prevItem := range prev {
-		if _, has := current[path]; !has {
-			if prevItem.IsDir {
-				updates = append(updates, Op{Path: path, Op: rmDir})
-			} else {
-				updates = append(updates, Op{Path: path, Op: unlink})
-			}
-		}
-	}
-
-	return updates
 }

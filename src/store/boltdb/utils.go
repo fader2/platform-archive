@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
+	"interfaces"
 	"log"
 
 	msgpack "gopkg.in/vmihailenco/msgpack.v2"
@@ -60,4 +61,24 @@ func decodeToStringInterface(b []byte, d interface{}) error {
 		return m, nil
 	}
 	return dec.Decode(&d)
+}
+
+func hasFileWithName(m *FileManager, bucketID uuid.UUID, name string) (bool, error) {
+	buck, err := m.buckets.FindBucket(bucketID, interfaces.FullBucket)
+	if err != nil {
+		if err == interfaces.ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+
+	_, err = m.FindFileByName(buck.BucketName, name, interfaces.PrimaryIDsData)
+	if err != nil {
+		if err == interfaces.ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return false, nil
 }

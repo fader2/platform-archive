@@ -9,21 +9,21 @@ import (
 	"api"
 )
 
-var legacyImportCmd = cli.Command{
-	Name:   "import64",
-	Action: legacyImport,
+var exportCmd = cli.Command{
+	Name:   "export",
+	Action: runExport,
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name: "input",
+			Name: "output",
 		},
 	},
 }
 
-func legacyImport(ctx *cli.Context) {
+func runExport(ctx *cli.Context) {
 	e := echo.New()
 	setup(e, ctx)
 
-	err := api.ImportBase64File(ctx.String("input"))
+	err := api.ExportWorkspace(ctx.String("output"))
 	if err != nil {
 		log.Fatal(err)
 	}
