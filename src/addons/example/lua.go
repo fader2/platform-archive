@@ -7,5 +7,6 @@ var exports = map[string]lua.LGFunction{
 }
 
 func myfunc(L *lua.LState) int {
-	return 0
+	L.Push(lua.LString("myfunc value"))
+	return 1
 }

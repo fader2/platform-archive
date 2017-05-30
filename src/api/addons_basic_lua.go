@@ -21,7 +21,7 @@ var exports = map[string]lua.LGFunction{
 	"ListFilesByBucketID": basicFn_listFilesFromBucketID,
 
 	// file manager
-	"FindFileByName": func(L *lua.LState) int { return 0 },
+	"FindFileByName": basicFn_FindFileByName,
 	"FindFile":       basicFn_FindFile,
 	"CreateFile": func(L *lua.LState) int {
 		file := checkFile(L)
@@ -963,13 +963,25 @@ func basicFn_FindFileByName(L *lua.LState) int {
 		bucketName, fileName string,
 		used DataUsed,
 	*/
-	// var bucketName, fileName string
-	// var used interfaces.DataUsed
+	var bucketName, fileName string
+	var used interfaces.DataUsed
 
-	// bucketName = L.CheckString(2)
-	// fileName = L.CheckString(3)
+	bucketName = L.CheckString(1)
+	fileName = L.CheckString(2)
+	used = interfaces.FullFile
 
-	return 0
+	file, err := fileManager.FindFileByName(
+		bucketName,
+		fileName,
+		used,
+	)
+
+	if err != nil {
+		L.RaiseError("FindFileByName: find file by name %s, err %s", bucketName+" "+fileName, err)
+		return 0
+	}
+
+	return newLuaFile(file)(L)
 }
 
 func basicFn_FindFile(L *lua.LState) int {

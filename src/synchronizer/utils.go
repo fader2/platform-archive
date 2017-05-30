@@ -4,11 +4,12 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"fmt"
-	"github.com/boltdb/bolt"
 	"net/url"
 	"path/filepath"
 	store "store/boltdb"
 	"strings"
+
+	"github.com/boltdb/bolt"
 	//"github.com/boltdb/bolt"
 	"interfaces"
 	"io/ioutil"
@@ -148,7 +149,7 @@ func getDownloadLink(remote string) (string, error) {
 	}
 	// todo
 	// https://github.com/ZloDeeV/gpsgame-android/archive/master.zip
-	if u.Hostname() == "github.com" {
+	if u.Host == "github.com" {
 		return remote + "/archive/master.zip", nil
 	}
 	return "", nil

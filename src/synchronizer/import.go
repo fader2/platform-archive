@@ -138,7 +138,7 @@ func ImportBucket(db DbManager, workspaceRoot, bucketName string) (err error) {
 		return err
 	}
 	for _, file := range files {
-		fmt.Println("[LOL]", file.Name())
+		fmt.Println("*", file.Name())
 		if ignoreImport(file.Name()) {
 			continue
 		}
