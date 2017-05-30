@@ -22,7 +22,7 @@ const (
 
 func Export(
 	db DbManager,
-	targetPath string) (err error) {
+	targetPath string, checkers ...VersionChecker) (err error) {
 
 	var (
 		isZip   = strings.HasSuffix(targetPath, ".zip")
@@ -57,6 +57,29 @@ func Export(
 
 	if err = db.EachFile(makeExportFileFunc(db, buckets, targetPath, isZip, zipFile)); err != nil {
 		return err
+	}
+
+	/* write package.toml */
+	if len(checkers) > 0 && checkers[0] != nil {
+		var wr io.Writer
+		if isZip {
+			zwr, err := zipFile.Create(checkers[0].FileName())
+			if err != nil {
+				return err
+			}
+			wr = zwr
+		} else {
+			f, err := os.OpenFile(filepath.Join(targetPath, checkers[0].FileName()), os.O_CREATE|os.O_WRONLY, FilesPermission)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			wr = f
+		}
+		err = checkers[0].WritePackageInfo(wr)
+		if err != nil {
+			return err
+		}
 	}
 
 	if isZip {
@@ -104,7 +127,6 @@ func getBuckets(bm DbManager) (map[string]*interfaces.Bucket, error) {
 
 func makeExportFileFunc(fileManager DbManager, buckets map[string]*interfaces.Bucket, targetWorkspace string, isZip bool, zipFile *zip.Writer) func(*interfaces.File) error {
 	return func(file *interfaces.File) (err error) {
-
 		if file == nil {
 			return fmt.Errorf("file is nil")
 		}

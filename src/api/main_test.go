@@ -68,13 +68,18 @@ func request(method, path string, e *echo.Echo) (int, []byte) {
 // internal
 
 func setupLuaContext(method, url string, d io.Reader, L *lua.LState) *Context {
+	ctx, _ := setupLuaContextWithResp(method, url, d, L)
+	return ctx
+}
+
+func setupLuaContextWithResp(method, url string, d io.Reader, L *lua.LState) (*Context, *test.ResponseRecorder) {
 	// strings.NewReader(userJSON)
 	e := echo.New()
 	req := test.NewRequest(method, url, d)
-	rec := test.NewResponseRecorder()
-	ctx := e.NewContext(req, rec)
+	resp := test.NewResponseRecorder()
+	ctx := e.NewContext(req, resp)
 
-	return ContextLuaExecutor(L, ctx)
+	return ContextLuaExecutor(L, ctx), resp
 }
 
 func setupLuaModules(L *lua.LState) {

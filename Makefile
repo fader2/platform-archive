@@ -1,7 +1,7 @@
 
 test:
 	GOPATH=${PWD} go test -v \
-		-run= ./src/fs/...
+		-run= ./src/api/
 	GOPATH=${PWD} go test -v \
 		-run= ./src/synchronizer/...
 	GOPATH=${PWD} go test -v \
@@ -20,6 +20,10 @@ import:
 	GOPATH=${PWD} \
 		go run src/cmd/platform/*.go import -input=file.zip
 .PHONY: test
+
+export:
+	GOPATH=${PWD} \
+		go run src/cmd/platform/*.go export -output=export.zip 
 
 import64:
 	GOPATH=${PWD} \

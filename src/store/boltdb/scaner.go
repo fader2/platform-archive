@@ -93,6 +93,7 @@ func (m *FileManager) EachFile(fn func(*interfaces.File) error) error {
 			m.logger.Println("[ERR] find file ", fileID, ":", err)
 			return err
 		}
+
 		if err := fn(file); err != nil {
 			return err
 		}

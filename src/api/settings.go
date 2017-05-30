@@ -14,10 +14,13 @@ var (
 	DefaultApiHost = ""
 	DefaultApiPort = "1323"
 
-	DefaultWorkspacePath = "FaderWorkspace"
+	DefaultWorkspacePath   = "FaderWorkspace"
+	DefaultPackageFileName = "package.toml"
+
+	DefaultAppName = "fader"
 
 	// DefaultTimeoutFileProvider timeout handler of load file
-	DefaultTimeoutFileProvider = time.Millisecond * 100
+	DefaultTimeoutFileProvider = time.Millisecond * 1000
 )
 
 // config

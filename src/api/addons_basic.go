@@ -183,7 +183,7 @@ func (a *AddonBasic) LuaLoader(L *lua.LState) int {
 	)
 
 	L.SetField(mod, "check", L.NewFunction(func(L *lua.LState) int {
-		v := checkDataUsed(L)
+		v := checkDataUsed(L, 1)
 		log.Println("PrimaryIDsData", v&interfaces.PrimaryIDsData != 0)
 		log.Println("PrimaryNamesData", v&interfaces.PrimaryNamesData != 0)
 		log.Println("ContentTypeData", v&interfaces.ContentTypeData != 0)
@@ -194,6 +194,8 @@ func (a *AddonBasic) LuaLoader(L *lua.LState) int {
 		log.Println("StructuralData", v&interfaces.StructuralData != 0)
 		log.Println("RawData", v&interfaces.RawData != 0)
 		log.Println("BucketStoreNames", v&interfaces.BucketStoreNames != 0)
+
+		log.Println("NIL", v == interfaces.DataUsed(0))
 
 		return 0
 	}))

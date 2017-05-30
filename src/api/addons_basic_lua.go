@@ -23,116 +23,20 @@ var exports = map[string]lua.LGFunction{
 	// file manager
 	"FindFileByName": basicFn_FindFileByName,
 	"FindFile":       basicFn_FindFile,
-	"CreateFile": func(L *lua.LState) int {
-		file := checkFile(L)
-
-		err := fileManager.CreateFile(file.File)
-
-		if err != nil {
-			L.RaiseError("create file %s, err %s", file.FileID, err)
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		L.Push(lua.LBool(true))
-		return 1
-	},
-	"CreateFileFrom": func(L *lua.LState) int { return 0 },
-	"UpdateFileFrom": func(L *lua.LState) int {
-		file := checkFile(L)
-		mode := L.CheckUserData(2).Value.(interfaces.DataUsed)
-
-		err := fileManager.UpdateFileFrom(file.File, mode)
-
-		log.Printf("update file %s, name %s, mode %v", file.FileID, file.FileName, mode)
-
-		if err != nil {
-			L.RaiseError("update file %s, err %s", file.FileID, err)
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		L.Push(lua.LBool(true))
-		return 1
-	},
-	"DeleteFile": func(L *lua.LState) int {
-		var id uuid.UUID
-
-		lv := L.Get(1)
-		switch lv.Type() {
-		case lua.LTString:
-			id = uuid.FromStringOrNil(lv.(lua.LString).String())
-		case lua.LTUserData:
-			switch v := lv.(*lua.LUserData).Value.(type) {
-			case uuid.UUID:
-				id = v
-			case string:
-				id = uuid.FromStringOrNil(v)
-			default:
-				L.ArgError(
-					1,
-					fmt.Sprintf("DeleteFile: not supported ID type %T", v),
-				)
-				L.Push(lua.LBool(false))
-				return 1
-			}
-		default:
-			L.ArgError(
-				1,
-				fmt.Sprintf(
-					"DeleteFile: not supported ID type %v",
-					lv.Type(),
-				),
-			)
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		if uuid.Equal(uuid.Nil, id) {
-			L.ArgError(
-				1,
-				"DeleteFile: empty ID",
-			)
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		if err := fileManager.DeleteFile(id); err != nil {
-			L.RaiseError(
-				"DeleteFile: error delete file %v, err: %s",
-				id,
-				err,
-			)
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		log.Println("DeleteFile: success delete file ID", id)
-
-		L.Push(lua.LBool(true))
-		return 1
-	},
+	"CreateFile":     basicFn_CreateFile,
+	"CreateFileFrom": basicFn_CreateFileFrom,
+	"UpdateFileFrom": basicFn_UpdateFileFrom,
+	"DeleteFile":     basicFn_DeleteFile,
 
 	// bucket manager
-	"FindBucketByName": func(L *lua.LState) int { return 0 },
+	"FindBucketByName": basicFn_FindBucketByName,
 	"FindBucket":       basicFn_FindBucket,
 
-	"CreateBucket": func(L *lua.LState) int {
-		bucketFile := interfaces.NewBucket()
-		bucketFile.BucketID = uuid.NewV4()
-		bucketFile.BucketName = L.CheckString(1)
-
-		if err := bucketManager.CreateBucket(bucketFile); err != nil {
-			L.RaiseError("create bucket %s, err %s", bucketFile.BucketName, err)
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		L.Push(lua.LBool(true))
-		return 1
-	},
-	"CreateBucketFrom": func(L *lua.LState) int { return 0 },
-	"UpdateBucketFrom": func(L *lua.LState) int { return 0 },
+	"CreateBucket": basicFn_CreateBucket,
+	"UpdateBucket": basicFn_UpdateBucket,
+	"DeleteBucket": basicFn_DeleteBucket,
+	//"CreateBucketFrom": func(L *lua.LState) int { return 0 },
+	//"UpdateBucketFrom": func(L *lua.LState) int { return 0 },
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -151,11 +55,18 @@ func newDataUsed(v interfaces.DataUsed) func(L *lua.LState) int {
 	}
 }
 
-func checkDataUsed(L *lua.LState) interfaces.DataUsed {
-	ud := L.CheckUserData(1)
-	if v, ok := ud.Value.(interfaces.DataUsed); ok {
-		return v
+func checkDataUsed(L *lua.LState, argNum int) interfaces.DataUsed {
+	ud := L.CheckUserData(argNum)
+	switch ud.Value.(type) {
+	case interfaces.DataUsed:
+		return ud.Value.(interfaces.DataUsed)
+	case int:
+		return interfaces.DataUsed(uint32(ud.Value.(int)))
+	case int64:
+		return interfaces.DataUsed(uint32(ud.Value.(int64)))
 	}
+
+	// todo unreacheble code
 	L.ArgError(1, "interfaces.DataUsed expected")
 	return interfaces.DataUsed(0)
 }
@@ -164,8 +75,21 @@ func checkDataUsed(L *lua.LState) interfaces.DataUsed {
 
 var dataUsedMethods = map[string]lua.LGFunction{
 	"Has": func(L *lua.LState) int {
-		// TODO:
-		return 0
+		ud := L.CheckUserData(1)
+		self, ok := ud.Value.(interfaces.DataUsed)
+		if !ok {
+			L.ArgError(1, "interfaces.DataUsed expected")
+			return 0
+		}
+		ud = L.CheckUserData(2)
+		needle, ok := ud.Value.(interfaces.DataUsed)
+		if !ok {
+			L.ArgError(2, "interfaces.DataUsed expected")
+			return 0
+		}
+
+		L.Push(lua.LBool(self&needle != 0))
+		return 1
 	},
 	"Add": func(L *lua.LState) int {
 		var self *lua.LUserData
@@ -183,7 +107,7 @@ var dataUsedMethods = map[string]lua.LGFunction{
 			_v, ok := ud.Value.(interfaces.DataUsed)
 			if !ok {
 				L.ArgError(i, "interfaces.DataUsed expected")
-				continue
+				return 0
 			}
 			v = v | _v
 		}
@@ -658,6 +582,7 @@ var fileMethods = map[string]lua.LGFunction{
 		}
 
 		file := checkFile(L)
+		fmt.Println("Set raw data", L.CheckString(2))
 		file.RawData = []byte(L.CheckString(2))
 		return 0
 	},
@@ -964,6 +889,7 @@ func basicFn_FindFileByName(L *lua.LState) int {
 		used DataUsed,
 	*/
 	var bucketName, fileName string
+<<<<<<< HEAD
 	var used interfaces.DataUsed
 
 	bucketName = L.CheckString(1)
@@ -978,6 +904,18 @@ func basicFn_FindFileByName(L *lua.LState) int {
 
 	if err != nil {
 		L.RaiseError("FindFileByName: find file by name %s, err %s", bucketName+" "+fileName, err)
+=======
+	// todo
+	// var used interfaces.DataUsed
+
+	bucketName = L.CheckString(1)
+	fileName = L.CheckString(2)
+	fmt.Println("Find file by name", bucketName, fileName)
+
+	file, err := fileManager.FindFileByName(bucketName, fileName, interfaces.FullFile)
+	if err != nil {
+		L.RaiseError("FindFile: find file by name %s, err %s", fileName, err)
+>>>>>>> 5937a5a42dcb30afd5b0883f321d59621191e94a
 		return 0
 	}
 
@@ -1035,20 +973,154 @@ func basicFn_FindFile(L *lua.LState) int {
 }
 
 func basicFn_CreateFileFrom(L *lua.LState) int {
-	return 0
+	file := checkFile(L)
+
+	mode := L.CheckUserData(2).Value.(interfaces.DataUsed)
+
+	err := fileManager.CreateFileFrom(file.File, mode)
+	if err != nil {
+		L.RaiseError("create file %s, err %s", file.FileID, err)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	L.Push(lua.LBool(true))
+	return 1
 }
 
 func basicFn_UpdateFileFrom(L *lua.LState) int {
-	return 0
+	file := checkFile(L)
+	mode := L.CheckUserData(2).Value.(interfaces.DataUsed)
+
+	err := fileManager.UpdateFileFrom(file.File, mode)
+
+	log.Printf("update file %s, name %s, mode %v", file.FileID, file.FileName, mode)
+
+	if err != nil {
+		L.RaiseError("update file %s, err %s", file.FileID, err)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	L.Push(lua.LBool(true))
+	return 1
 }
 
 func basicFn_DeleteFile(L *lua.LState) int {
-	return 0
+	var id uuid.UUID
+
+	lv := L.Get(1)
+	switch lv.Type() {
+	case lua.LTString:
+		id = uuid.FromStringOrNil(lv.(lua.LString).String())
+	case lua.LTUserData:
+		switch v := lv.(*lua.LUserData).Value.(type) {
+		case uuid.UUID:
+			id = v
+		case string:
+			id = uuid.FromStringOrNil(v)
+		default:
+			L.ArgError(
+				1,
+				fmt.Sprintf("DeleteFile: not supported ID type %T", v),
+			)
+			L.Push(lua.LBool(false))
+			return 1
+		}
+	default:
+		L.ArgError(
+			1,
+			fmt.Sprintf(
+				"DeleteFile: not supported ID type %v",
+				lv.Type(),
+			),
+		)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	if uuid.Equal(uuid.Nil, id) {
+		L.ArgError(
+			1,
+			"DeleteFile: empty ID",
+		)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	if err := fileManager.DeleteFile(id); err != nil {
+		L.RaiseError(
+			"DeleteFile: error delete file %v, err: %s",
+			id,
+			err,
+		)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	log.Println("DeleteFile: success delete file ID", id)
+
+	L.Push(lua.LBool(true))
+	return 1
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Bucket manager
 ////////////////////////////////////////////////////////////////////////////////
+
+func basicFn_CreateBucket(L *lua.LState) int {
+	bucketFile := interfaces.NewBucket()
+	bucketFile.BucketID = uuid.NewV4()
+	bucketFile.BucketName = L.CheckString(1)
+
+	if err := bucketManager.CreateBucket(bucketFile); err != nil {
+		L.RaiseError("create bucket %s, err %s", bucketFile.BucketName, err)
+		L.Push(lua.LBool(false))
+		return 0
+	}
+
+	L.Push(lua.LBool(true))
+	return 1
+}
+
+func basicFn_UpdateBucket(L *lua.LState) int {
+	bucket := checkBucket(L)
+	if bucket == nil {
+		L.ArgError(1, fmt.Sprintf("UpdateBucket: first argument error. Need bucket."))
+		return 0
+	}
+	used := checkDataUsed(L, 2)
+	if used == interfaces.DataUsed(0) {
+		used = interfaces.FullBucket
+	}
+
+	err := bucketManager.UpdateBucket(bucket.Bucket, used)
+	if err != nil {
+		L.RaiseError("update bucket %s, err %s", bucket.BucketName, err)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	L.Push(lua.LBool(true))
+	return 1
+}
+
+// todo
+func basicFn_DeleteBucket(L *lua.LState) int {
+	//bucketName := L.CheckString(1)
+
+	return 0
+}
+
+func basicFn_FindBucketByName(L *lua.LState) int {
+	name := L.CheckString(1)
+	bucket, err := bucketManager.FindBucketByName(name, interfaces.FullBucket)
+	if err != nil {
+		L.RaiseError("FindBucketByName: find bucket by name %s, err %s", name, err)
+		return 0
+	}
+	return newLuaBucket(bucket)(L)
+}
 
 func basicFn_FindBucket(L *lua.LState) int {
 	var id uuid.UUID
@@ -1157,6 +1229,21 @@ func basicFn_InMemoryDel(L *lua.LState) int {
 			"InMemoryDel: error deleting, %s",
 			err,
 		)
+		L.Push(lua.LBool(false))
+		return 1
+	}
+
+	L.Push(lua.LBool(true))
+	return 1
+}
+
+func basicFn_CreateFile(L *lua.LState) int {
+	file := checkFile(L)
+
+	err := fileManager.CreateFile(file.File)
+
+	if err != nil {
+		L.RaiseError("create file %s, err %s", file.FileID, err)
 		L.Push(lua.LBool(false))
 		return 1
 	}
