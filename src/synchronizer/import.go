@@ -6,6 +6,7 @@ import (
 	"interfaces"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 	//"log"
@@ -173,12 +174,38 @@ func ImportBucket(db DbManager, workspaceRoot, bucketName string) (err error) {
 		if ignoreImport(file.Name()) {
 			continue
 		}
-		if err = ImportFsVirtualFile(db, workspaceRoot, bucketName, file.Name()); err != nil {
+		if file.IsDir() {
+			err = filepath.Walk(filepath.Join(workspaceRoot, bucketName), makeWalkImportFunc(db, workspaceRoot, bucketName, file.Name()))
+		} else {
+			err = ImportFsVirtualFile(db, workspaceRoot, bucketName, file.Name())
+		}
+		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func makeWalkImportFunc(db DbManager, workspaceRoot, bucketName, dirName string) filepath.WalkFunc {
+	return func(path string, info os.FileInfo, err error) error {
+		bucketRoot := filepath.Join(workspaceRoot, bucketName)
+		filePath, err := filepath.Rel(bucketRoot, path)
+		if err != nil {
+			return err
+		}
+		if ignoreImport(filePath) {
+			return nil
+		}
+		log.Println("[IMPORT DIR]", filePath)
+		if !info.IsDir() {
+			err = ImportFsVirtualFile(db, workspaceRoot, bucketName, filePath)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }
 
 // ImportFsVirtualFile set folder items (file_name,config.json,meta.json,structural.json) as file in boltdb
@@ -203,7 +230,7 @@ func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName strin
 			needs = append(needs, fp)
 		}
 	}
-	fmt.Println("IMPORT", needs)
+	fmt.Println("IMPORT", filePath, needs)
 	//todo ?? need delete file if it empty folder?
 	//if len(files) == 0 {
 	//	return deleteFileByName(db, bucketName, fileName)
@@ -367,6 +394,8 @@ func createOrGetFile(db DbManager, bucketName, fileName string) (file *interface
 	var (
 		bucket *interfaces.Bucket
 	)
+
+	fileName = originFileName(fileName)
 
 	if file, err = db.FindFileByName(bucketName, fileName, interfaces.FullFile); err != nil && err != interfaces.ErrNotFound {
 		return
