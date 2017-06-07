@@ -3,14 +3,16 @@ package synchronizer
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"interfaces"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/boltdb/bolt"
 )
@@ -87,6 +89,9 @@ var tw = map[string]struct {
 	"/bucket1/filename":       {false, interfaces.RawData, "data"},
 	"/bucket1/file":           {false, interfaces.RawData, "<!html>"},
 	"/bucket1/file.meta.json": {false, interfaces.MetaData, `{"testmeta":"testmeta"}`},
+	"/dir/a/file1.meta.json":  {false, interfaces.MetaData, `{"testmeta":"testmeta"}`},
+	"/dir/a/file1.json":       {false, interfaces.StructuralData, `{"testkey":"testdata"}`},
+	"/dir/a/file1":            {false, interfaces.RawData, `testdatadir`},
 }
 
 func createFileInWorkspace(workspaceRoot, path string, isDir bool, data string) (bool, error) {
@@ -195,12 +200,15 @@ func TestImportWorkspace(t *testing.T) {
 
 	err = ImportWorkspace(newDbManager(testDb), workspaceRoot)
 	assert.NoError(t, err, "Error test import workspace in empty database")
-
+	newDbManager(testDb).EachFile(func(f *interfaces.File) error {
+		log.Println(f)
+		return nil
+	})
 	for filePath, fileMeta := range tw {
 
-		arr := strings.Split(filePath, "/")
+		arr := strings.SplitN(filePath, "/", 3)
 		ifile, err := dbManager.FindFileByName(arr[1], originFileName(arr[2]), interfaces.FullFile)
-		assert.NoError(t, err, "Get must existing file from database %s/%s", arr[1], arr[2])
+		assert.NoError(t, err, "Get must existing file from database %s/%s", arr[1], originFileName(arr[2]))
 
 		assert.NoError(t, testFile(ifile, fileMeta.used, fileMeta.data), "file (%s) data test (%v), %s", filePath, ifile, fileMeta.used)
 	}

@@ -3,12 +3,13 @@ package synchronizer
 import (
 	"archive/zip"
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"github.com/boltdb/bolt"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"reflect"
+
+	"github.com/BurntSushi/toml"
+	"github.com/boltdb/bolt"
+	"github.com/stretchr/testify/assert"
 	//"os"
 	"testing"
 	"time"
@@ -126,7 +127,6 @@ func TestExport(t *testing.T) {
 			assert.Equal(t, true, has, "has file in zip file (%s)", file.Name)
 		}
 	}
-
 }
 
 /*func TestGetFSFileName(t *testing.T) {

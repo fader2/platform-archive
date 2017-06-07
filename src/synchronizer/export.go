@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"interfaces"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,7 +143,8 @@ func makeExportFileFunc(fileManager DbManager, buckets map[string]*interfaces.Bu
 
 		targetPath := bucket.BucketName
 		if !isZip {
-			targetPath = filepath.Join(targetWorkspace, targetPath)
+			targetPath = filepath.Dir(filepath.Join(targetWorkspace, targetPath, file.FileName))
+			log.Println(targetPath)
 			if err := os.MkdirAll(targetPath, FilesPermission); err != nil && !os.IsExist(err) {
 				return err
 			}
@@ -160,11 +162,13 @@ func makeExportFileFunc(fileManager DbManager, buckets map[string]*interfaces.Bu
 				continue
 			}
 			var (
-				wr    io.Writer
-				fname = filepath.Join(targetPath, getFileName(file.FileName, used))
+				wr       io.Writer
+				_, fName = filepath.Split(getFileName(file.FileName, used))
+				fname    = filepath.Join(targetPath, fName)
 			)
+			log.Println("Write", fname, file.FileName)
 			if isZip {
-				wr, err = zipFile.Create(fname)
+				wr, err = zipFile.Create(filepath.Join(targetPath, getFileName(file.FileName, used)))
 				if err != nil {
 					return err
 				}
