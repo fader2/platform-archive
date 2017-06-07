@@ -2,6 +2,7 @@ package synchronizer
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -111,6 +112,19 @@ const (
 	change
 )
 
+func (o ops) String() string {
+	switch o {
+	case create:
+		return "Create file"
+	case mkDir:
+		return "Make dirrectory"
+	case change:
+		return "Change file"
+	default:
+		return fmt.Sprint(int(o))
+	}
+}
+
 type Op struct {
 	Path string
 	Op   ops
@@ -128,9 +142,9 @@ func (prev FSTree) Calculate(current *FSTree) []Op {
 		}
 
 		if prevItem, has := prev.items[path]; !has {
-			if prevItem.IsDir {
+			if item.IsDir {
 				updates = append(updates, Op{Path: path, Op: mkDir})
-			} else {
+			} else if !prevItem.IsDir {
 				updates = append(updates, Op{Path: path, Op: create})
 			}
 		} else {
