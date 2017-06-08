@@ -230,7 +230,7 @@ func ImportFsVirtualFile(db DbManager, workspaceRoot, bucketName, fileName strin
 			needs = append(needs, fp)
 		}
 	}
-	fmt.Println("IMPORT", filePath, needs)
+	fmt.Println("IMPORT", filePath, needs, fileName)
 	//todo ?? need delete file if it empty folder?
 	//if len(files) == 0 {
 	//	return deleteFileByName(db, bucketName, fileName)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fs"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -185,23 +186,23 @@ func (s *Synchronizer) Watch() error {
 			//start := time.Now()
 			current, err := NewFSTreeFromFs(s.workSpacePath)
 			if err != nil {
-				fmt.Println("[WATCHER ERR]", err)
+				log.Println("[WATCHER ERR]", err)
 				break
 			}
 			changes := s.tree.Calculate(current)
 			for _, op := range changes {
-				fmt.Println("[WATCH event]", op.Op, op.Path)
 				switch op.Op {
-				case change, create, mkDir:
+				case change, create:
+					log.Println("[Create new file]", op.Op, op.Path)
 					err := s.handleUpdateOrCreate(filepath.Join(s.workSpacePath, op.Path), "")
 					if err != nil {
-						fmt.Println("[WATCHER ERR]", err)
+						log.Println("[WATCHER ERR]", err)
 						break
 					}
 				case unlink, rmDir:
 					err := s.handleRemoveFile(filepath.Join(s.workSpacePath, op.Path))
 					if err != nil {
-						fmt.Println("[WATCHER ERR]", err)
+						log.Println("[WATCHER ERR]", err)
 						break
 					}
 				}
@@ -264,18 +265,19 @@ func (s *Synchronizer) handleRemoveFile(name string) error {
 
 func (s *Synchronizer) handleUpdateOrCreate(name, oldname string) error {
 	// todo test abs path
-	arr := strings.SplitN(name, "/", 4)
+	arr := strings.SplitN(name, "/", 3)
 	if len(arr) == 2 {
-		fmt.Println("Path is bucket, skip")
+		log.Println("Path is bucket, skip")
 	} else if len(arr) == 3 {
-		fmt.Printf("we need update file, with %s filename, %s bucketname\n", arr[2], arr[1])
+		log.Printf("we need update file, with %s filename, %s bucketname\n", arr[2], arr[1])
 
 		bucketName := arr[1]
 		fileName := arr[2]
 
+		log.Printf("[IMPORT] %s/%s\n", bucketName, fileName)
 		err := ImportFsDataFile(s.dbManager, s.workSpacePath, bucketName, fileName)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}
 	return nil
