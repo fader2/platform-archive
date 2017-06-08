@@ -3,6 +3,7 @@ package synchronizer
 import (
 	"fmt"
 	"fs"
+	"interfaces"
 	"io/ioutil"
 	"log"
 	"os"
@@ -186,7 +187,7 @@ func (s *Synchronizer) Watch() error {
 			//start := time.Now()
 			current, err := NewFSTreeFromFs(s.workSpacePath)
 			if err != nil {
-				log.Println("[WATCHER ERR]", err)
+				log.Println("[NEW WATCHER ERR]", err)
 				break
 			}
 			changes := s.tree.Calculate(current)
@@ -240,6 +241,10 @@ func (s *Synchronizer) handleRemoveFile(name string) error {
 		// file deleted
 		err := deleteFileByName(s.dbManager, bucketName, fileName)
 		if err != nil {
+			// hack for folder
+			if err == interfaces.ErrNotFound {
+				return nil
+			}
 			return err
 		}
 	} else if len(arr) == 4 {
