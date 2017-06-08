@@ -200,6 +200,7 @@ func (s *Synchronizer) Watch() error {
 						break
 					}
 				case unlink, rmDir:
+					log.Println("[Delete file]", op.Op, op.Path)
 					err := s.handleRemoveFile(filepath.Join(s.workSpacePath, op.Path))
 					if err != nil {
 						log.Println("[WATCHER ERR]", err)
@@ -220,7 +221,7 @@ func (s *Synchronizer) Watch() error {
 
 func (s *Synchronizer) handleRemoveFile(name string) error {
 	var (
-		arr = strings.SplitN(name, "/", 4)
+		arr = strings.SplitN(name, "/", 3)
 
 		//workspace  = arr[0]
 		bucketName string
