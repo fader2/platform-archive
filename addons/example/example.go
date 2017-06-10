@@ -9,6 +9,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+//go:generate echo "OK"
+
 func init() {
 	addons.Register(&Addon{})
 }

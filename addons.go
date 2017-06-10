@@ -1,8 +1,9 @@
 package main
 
 import (
-	// addons
 	"github.com/CloudyKit/jet/loaders/multi"
+
+	// addons
 	_ "github.com/fader2/platform/addons/example"
 )
 
@@ -11,4 +12,4 @@ var (
 )
 
 // +Build ignore
-//go:generate go run addons/example/assets/generate.go
+//go:generate make -C addons/example build
