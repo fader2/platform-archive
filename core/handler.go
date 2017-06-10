@@ -33,6 +33,7 @@ var (
 
 type AssetsLoader interface {
 	Open(name string) (io.ReadCloser, error)
+	Exists(name string) (string, bool)
 }
 
 func EntrypointHandler(
@@ -50,7 +51,6 @@ func EntrypointHandler(
 		r *http.Request,
 		ps httprouter.Params,
 	) {
-		log.Println(route.Handler)
 		if config.IsMaintenance() {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			w.Header().Set("Retry-After", "120")
@@ -96,10 +96,18 @@ func EntrypointHandler(
 
 		// execute all middlewares
 		for _, middleware := range route.Middlewares {
-			f, err := assets.Open(middleware)
+			fullPathToMiddleware, exists := assets.Exists(middleware)
+			if !exists {
+				log.Printf(
+					"error open middleware %s, not exists",
+					middleware,
+				)
+				continue
+			}
+			f, err := assets.Open(fullPathToMiddleware)
 			if err != nil {
 				log.Printf(
-					"error execute middleware %s, %s",
+					"error open middleware %s, %s",
 					middleware,
 					err,
 				)

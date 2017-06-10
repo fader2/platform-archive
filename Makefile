@@ -1,5 +1,5 @@
 run:
-	go run platform.go
+	go run platform.go addons.go
 .PHONY: run
 
 build:

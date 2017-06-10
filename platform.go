@@ -59,7 +59,6 @@ func main() {
 	fs = osfs.New(*workspace).Dir("")
 	loadSetting()
 	showCfg()
-
 	go continueFrontend()
 
 	////////////////////////////////////////////////////////////////////////////

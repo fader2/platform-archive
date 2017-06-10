@@ -1,0 +1,6 @@
+foo
+
+{{include "item.jet" "ok"}}
+{{include "bar.jet" "ok"}} 
+
+{{yield menu() "ok"}}

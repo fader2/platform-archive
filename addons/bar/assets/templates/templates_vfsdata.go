@@ -30,28 +30,16 @@ var Assets = func() http.FileSystem {
 	fs := vfsgen۰FS{
 		"/": &vfsgen۰DirInfo{
 			name:    "/",
-			modTime: mustUnmarshalTextTime("2017-06-10T15:38:34Z"),
+			modTime: mustUnmarshalTextTime("2017-06-10T16:42:25Z"),
 		},
-		"/example.jet": &vfsgen۰FileInfo{
-			name:    "example.jet",
-			modTime: mustUnmarshalTextTime("2017-06-10T15:37:44Z"),
-			content: []byte("\x65\x78\x61\x6d\x70\x6c\x65\x2e\x6a\x65\x74\x0a\x0a\x7b\x7b\x20\x69\x6e\x63\x6c\x75\x64\x65\x20\x22\x69\x74\x65\x6d\x2e\x6a\x65\x74\x22\x20\x22\x6f\x6b\x22\x20\x7d\x7d\x0a\x7b\x7b\x79\x69\x65\x6c\x64\x20\x6d\x65\x6e\x75\x28\x29\x20\x22\x6f\x6b\x22\x7d\x7d"),
-		},
-		"/example.lua": &vfsgen۰FileInfo{
-			name:    "example.lua",
-			modTime: mustUnmarshalTextTime("2017-06-10T15:38:44Z"),
-			content: []byte("\x70\x72\x69\x6e\x74\x28\x22\x65\x78\x61\x6d\x70\x6c\x65\x22\x29"),
-		},
-		"/item.jet": &vfsgen۰FileInfo{
-			name:    "item.jet",
-			modTime: mustUnmarshalTextTime("2017-06-10T15:32:11Z"),
-			content: []byte("\x69\x74\x65\x6d\x20\x7b\x7b\x2e\x7d\x7d"),
+		"/bar.jet": &vfsgen۰FileInfo{
+			name:    "bar.jet",
+			modTime: mustUnmarshalTextTime("2017-06-10T16:42:29Z"),
+			content: []byte("\x62\x61\x72"),
 		},
 	}
 	fs["/"].(*vfsgen۰DirInfo).entries = []os.FileInfo{
-		fs["/example.jet"].(os.FileInfo),
-		fs["/example.lua"].(os.FileInfo),
-		fs["/item.jet"].(os.FileInfo),
+		fs["/bar.jet"].(os.FileInfo),
 	}
 
 	return fs

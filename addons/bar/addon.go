@@ -1,15 +1,12 @@
-package example
+package bar
 
 import (
 	"github.com/CloudyKit/jet"
 	"github.com/CloudyKit/jet/loaders/httpfs"
 	"github.com/fader2/platform/addons"
-	"github.com/fader2/platform/addons/example/assets/templates"
-	"github.com/fader2/platform/config"
+	"github.com/fader2/platform/addons/bar/assets/templates"
 	lua "github.com/yuin/gopher-lua"
 )
-
-//go:generate echo "OK"
 
 func init() {
 	addons.Register(&Addon{})
@@ -19,7 +16,7 @@ type Addon struct {
 }
 
 func (a *Addon) Name() string {
-	return "example"
+	return "bar"
 }
 
 func (a *Addon) LuaModule() lua.LGFunction {
@@ -39,18 +36,4 @@ func (a *Addon) AssetsLoader() jet.Loader {
 	return httpfs.NewLoader(templates.Assets)
 }
 
-var exports = map[string]lua.LGFunction{
-	"LoadConfig": func(L *lua.LState) int {
-		cfg := config.LuaCheckCfg(L)
-		cfg.Routs = append(cfg.Routs, config.Route{
-			"GET",
-			"/_example",
-			"example.jet",
-			[]string{
-				"example.lua",
-			},
-			[]string{},
-		})
-		return 0
-	},
-}
+var exports = map[string]lua.LGFunction{}

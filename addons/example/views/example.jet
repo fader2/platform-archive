@@ -1,4 +1,0 @@
-example.jet
-
-{{ include "item.jet" "ok" }}
-{{yield menu() "ok"}}
