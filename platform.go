@@ -18,6 +18,9 @@ import (
 	"encoding/json"
 
 	"github.com/CloudyKit/jet"
+	"github.com/CloudyKit/jet/loaders/multi"
+	"github.com/fader2/platform/addons"
+	"github.com/fader2/platform/config"
 	"github.com/fader2/platform/core"
 	"github.com/julienschmidt/httprouter"
 	billy "gopkg.in/src-d/go-billy.v2"
@@ -34,7 +37,7 @@ var workspace = flag.String("workspace", "_workspace", "Path to work directory")
 var port = flag.Int("port", 8383, "Port listening for the frontend")
 
 var (
-	cfg    *core.Config
+	cfg    *config.Config
 	tpls   *jet.Set
 	routes *httprouter.Router
 	fs     billy.Filesystem
@@ -45,7 +48,14 @@ var (
 func main() {
 	flag.Parse()
 
-	tpls = jet.NewHTMLSet(*workspace)
+	assets = multi.NewLoader(
+		addons.AppendJetLoaders(
+			jet.NewOSFileSystemLoader(*workspace),
+		)...,
+	)
+
+	tpls = jet.NewHTMLSetLoader(assets)
+
 	fs = osfs.New(*workspace).Dir("")
 	loadSetting()
 	showCfg()
@@ -63,18 +73,12 @@ func main() {
 		for sig := range signals {
 
 			switch sig {
-			case syscall.SIGCONT:
-				log.Printf("captured %v, processing...", sig)
-				continueFrontend()
-			case syscall.SIGSTOP:
-				log.Printf("captured %v, processing...", sig)
-				stopFrontend()
 			case syscall.SIGUSR1:
 				log.Printf("captured %v, processing...", sig)
 				stopFrontend()
 				loadSetting()
 				showCfg()
-				continueFrontend()
+				go continueFrontend()
 			default:
 				log.Printf("captured %v, exiting...", sig)
 				destroy()
@@ -107,7 +111,7 @@ func loadSetting() {
 	}
 	faderSettings := new(bytes.Buffer)
 	io.Copy(faderSettings, fader)
-	cfg, err = core.LoadConfigFromLua(faderSettings.Bytes())
+	cfg, err = config.LoadConfigFromLua(faderSettings.Bytes())
 	if err != nil {
 		log.Fatal("init fader settings (from lua):", err)
 	}
@@ -120,7 +124,7 @@ func loadSetting() {
 			strings.ToUpper(route.Method),
 			route.Path,
 			core.EntrypointHandler(
-				fs,
+				assets,
 				cfg,
 				route,
 				tpls,
@@ -139,8 +143,8 @@ func loadSetting() {
 
 func continueFrontend() {
 	log.Println("run frontend server")
-	core.SetMaintenance(false)
-	go startFrontendServer()
+	config.SetMaintenance(false)
+	startFrontendServer()
 }
 
 func startFrontendServer() {
@@ -161,7 +165,7 @@ func stopFrontendServer() {
 
 func stopFrontend() {
 	log.Println("stop frontend server")
-	core.SetMaintenance(true)
+	config.SetMaintenance(true)
 	stopFrontendServer()
 }
 

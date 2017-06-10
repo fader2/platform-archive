@@ -1,11 +1,13 @@
-package core
+package config
 
 import (
 	"fmt"
 	"log"
 	"sync/atomic"
 
-	"github.com/yuin/gopher-lua"
+	"github.com/fader2/platform/addons"
+	"github.com/fader2/platform/utils"
+	lua "github.com/yuin/gopher-lua"
 )
 
 var (
@@ -37,6 +39,8 @@ func LoadConfigFromLua(raw []byte) (c *Config, err error) {
 	defer L.Close()
 
 	luaSetCfg(L, c)
+
+	addons.PreloadLuaModules(L)
 
 	if err = L.DoString(string(raw)); err != nil {
 		return
@@ -83,7 +87,9 @@ func luaCfgBuilder(cfg *Config) func(L *lua.LState) int {
 	}
 }
 
-func luaCheckCfg(L *lua.LState) *Config {
+// LuaCheckCfg returns *Config if it is first argument
+// helpful function, used in Lua modules
+func LuaCheckCfg(L *lua.LState) *Config {
 	ud := L.CheckUserData(1)
 	if v, ok := ud.Value.(*Config); ok {
 		return v
@@ -104,26 +110,26 @@ var luaCfgMethods = map[string]lua.LGFunction{
 		- middlewares
 	*/
 	"AddRoute": func(L *lua.LState) int {
-		cfg := luaCheckCfg(L)
+		cfg := LuaCheckCfg(L)
 
 		cfg.Routs = append(cfg.Routs, luaCfg_RouteFromLuaFn(L))
 
 		return 0
 	},
 	"Dev": func(L *lua.LState) int {
-		cfg := luaCheckCfg(L)
+		cfg := LuaCheckCfg(L)
 		cfg.Dev = L.CheckBool(2)
 		return 0
 	},
 	"NotFoundPage": func(L *lua.LState) int {
-		cfg := luaCheckCfg(L)
+		cfg := LuaCheckCfg(L)
 
 		cfg.NotFoundPage = luaCfg_RouteFromLuaFn(L)
 
 		return 0
 	},
 	"ForbiddenPage": func(L *lua.LState) int {
-		cfg := luaCheckCfg(L)
+		cfg := LuaCheckCfg(L)
 
 		cfg.ForbiddenPage = luaCfg_RouteFromLuaFn(L)
 
@@ -152,7 +158,7 @@ func luaCfg_RouteFromLuaFn(L *lua.LState) (route Route) {
 	////////////////////////////////////////////////////////
 
 	anylv := L.CheckAny(5) // middlewares array
-	anyi := ToValueFromLValue(anylv)
+	anyi := utils.ToValueFromLValue(anylv)
 	if arr, ok := anyi.([]interface{}); ok {
 		for _, item := range arr {
 			if midl, ok := item.(string); ok {
@@ -176,7 +182,7 @@ func luaCfg_RouteFromLuaFn(L *lua.LState) (route Route) {
 	////////////////////////////////////////////////////////
 
 	anylv = L.CheckAny(6)
-	anyi = ToValueFromLValue(anylv)
+	anyi = utils.ToValueFromLValue(anylv)
 	if arr, ok := anyi.([]interface{}); ok {
 		for _, item := range arr {
 			if role, ok := item.(string); ok {

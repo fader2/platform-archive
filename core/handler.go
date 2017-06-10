@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	billy "gopkg.in/src-d/go-billy.v2"
+	"github.com/fader2/platform/config"
+	"github.com/fader2/platform/utils"
 
 	"log"
 
@@ -14,6 +15,7 @@ import (
 	"io"
 
 	"github.com/CloudyKit/jet"
+	"github.com/fader2/platform/addons"
 	"github.com/julienschmidt/httprouter"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -29,7 +31,16 @@ var (
 	}
 )
 
-func EntrypointHandler(fs billy.Filesystem, cfg *Config, route Route, tpls *jet.Set) func(
+type AssetsLoader interface {
+	Open(name string) (io.ReadCloser, error)
+}
+
+func EntrypointHandler(
+	assets AssetsLoader,
+	cfg *config.Config,
+	route config.Route,
+	tpls *jet.Set,
+) func(
 	w http.ResponseWriter,
 	r *http.Request,
 	ps httprouter.Params,
@@ -39,7 +50,8 @@ func EntrypointHandler(fs billy.Filesystem, cfg *Config, route Route, tpls *jet.
 		r *http.Request,
 		ps httprouter.Params,
 	) {
-		if IsMaintenance() {
+		log.Println(route.Handler)
+		if config.IsMaintenance() {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			w.Header().Set("Retry-After", "120")
 			w.Write([]byte("Maintenance. Please retry after 120 sec."))
@@ -64,10 +76,13 @@ func EntrypointHandler(fs billy.Filesystem, cfg *Config, route Route, tpls *jet.
 
 		// setup ctx and lua engine
 		L := lua.NewState()
-		vars := make(jet.VarMap)
 		defer L.Close()
+
+		addons.PreloadLuaModules(L)
+
+		vars := make(jet.VarMap)
 		ctx := NewContext(
-			route,
+			&route,
 			w,
 			r,
 			vars,
@@ -77,12 +92,11 @@ func EntrypointHandler(fs billy.Filesystem, cfg *Config, route Route, tpls *jet.
 		// set request options
 		for _, param := range ps {
 			vars.Set(param.Key, param.Value)
-			ctx.G[param.Key] = param.Value
 		}
 
 		// execute all middlewares
 		for _, middleware := range route.Middlewares {
-			f, err := fs.Open(middleware)
+			f, err := assets.Open(middleware)
 			if err != nil {
 				log.Printf(
 					"error execute middleware %s, %s",
@@ -91,6 +105,8 @@ func EntrypointHandler(fs billy.Filesystem, cfg *Config, route Route, tpls *jet.
 				)
 				continue
 			}
+			defer f.Close()
+
 			d := new(bytes.Buffer)
 			io.Copy(d, f)
 			if err := L.DoString(d.String()); err != nil {
@@ -122,13 +138,12 @@ func EntrypointHandler(fs billy.Filesystem, cfg *Config, route Route, tpls *jet.
 }
 
 func NewContext(
-	route Route,
+	route *config.Route,
 	w http.ResponseWriter,
 	r *http.Request,
 	vars jet.VarMap,
 ) *Context {
 	return &Context{
-		G:              make(map[string]interface{}),
 		Vars:           vars,
 		Route:          route,
 		w:              w,
@@ -138,13 +153,12 @@ func NewContext(
 }
 
 type Context struct {
-	G    map[string]interface{}
 	Vars jet.VarMap
 
 	w http.ResponseWriter
 	r *http.Request
 
-	Route          Route
+	Route          *config.Route
 	Err            error // in lua script was error
 	ResponseStatus int   // in lua script set response status
 
@@ -194,36 +208,11 @@ func luaCheckCtx(L *lua.LState) *Context {
 }
 
 var luaCtxMethods = map[string]lua.LGFunction{
-
 	"Set": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		k := L.CheckString(2)
 		lv := L.CheckAny(3)
-		v := ToValueFromLValue(lv)
-		if v == nil {
-			log.Printf("ctx.Set(): not supported type, got %T, key %s", lv, k)
-			return 0
-		}
-		ctx.G[k] = v
-		return 0
-	},
-	"Get": func(L *lua.LState) int {
-		ctx := luaCheckCtx(L)
-		k := L.CheckString(2)
-		v := ctx.G[k]
-		lv := ToLValueOrNil(v, L)
-		if lv == nil {
-			log.Printf("ctx.Get(): not supported type, got %T, key %s", v, k)
-			return 0
-		}
-		L.Push(lv)
-		return 1
-	},
-	"Setx": func(L *lua.LState) int {
-		ctx := luaCheckCtx(L)
-		k := L.CheckString(2)
-		lv := L.CheckAny(3)
-		v := ToValueFromLValue(lv)
+		v := utils.ToValueFromLValue(lv)
 		if v == nil {
 			log.Printf("ctx.Set(): not supported type, got %T, key %s", lv, k)
 			return 0
@@ -231,11 +220,11 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		ctx.Vars.Set(k, v)
 		return 0
 	},
-	"Getx": func(L *lua.LState) int {
+	"Get": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		k := L.CheckString(2)
 		v := ctx.Vars[k]
-		lv := ToLValueOrNil(v, L)
+		lv := utils.ToLValueOrNil(v, L)
 		if lv == nil {
 			log.Printf("ctx.Get(): not supported type, got %T, key %s", v, k)
 			return 0
@@ -276,7 +265,7 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		}
 
 		status := L.CheckInt(2)
-		v := ToValueFromLValue(L.CheckAny(3))
+		v := utils.ToValueFromLValue(L.CheckAny(3))
 
 		data, _ := json.Marshal(v)
 		ctx.Blob(
