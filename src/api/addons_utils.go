@@ -54,7 +54,11 @@ func (r RoutePongo2) URLPath(pairs ...interface{}) *url.URL {
 		}
 	}
 
-	v, _ := r.route.URLPath(args...)
+	v, err := r.route.URLPath(args...)
+	if err != nil {
+		log.Printf("Pongo 2 route.URLPath: error build url, %s", err)
+		return nil
+	}
 
 	return v
 }

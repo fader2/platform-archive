@@ -889,7 +889,6 @@ func basicFn_FindFileByName(L *lua.LState) int {
 		used DataUsed,
 	*/
 	var bucketName, fileName string
-<<<<<<< HEAD
 	var used interfaces.DataUsed
 
 	bucketName = L.CheckString(1)
@@ -904,18 +903,6 @@ func basicFn_FindFileByName(L *lua.LState) int {
 
 	if err != nil {
 		L.RaiseError("FindFileByName: find file by name %s, err %s", bucketName+" "+fileName, err)
-=======
-	// todo
-	// var used interfaces.DataUsed
-
-	bucketName = L.CheckString(1)
-	fileName = L.CheckString(2)
-	fmt.Println("Find file by name", bucketName, fileName)
-
-	file, err := fileManager.FindFileByName(bucketName, fileName, interfaces.FullFile)
-	if err != nil {
-		L.RaiseError("FindFile: find file by name %s, err %s", fileName, err)
->>>>>>> 5937a5a42dcb30afd5b0883f321d59621191e94a
 		return 0
 	}
 

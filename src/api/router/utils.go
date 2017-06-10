@@ -36,7 +36,8 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	// Backup the original.
 	template := tpl
 	// Now let's parse it.
-	defaultPattern := "[^/]+"
+	// defaultPattern := "[^/]+"
+	defaultPattern := "[a-zA-Z0-9.-а-яА-Я/]+"
 	if matchQuery {
 		defaultPattern = "[^?&]*"
 	} else if matchHost {
