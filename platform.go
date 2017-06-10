@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,12 +18,14 @@ import (
 	"github.com/CloudyKit/jet"
 	"github.com/fader2/platform/core"
 	"github.com/julienschmidt/httprouter"
+	billy "gopkg.in/src-d/go-billy.v2"
+	"gopkg.in/src-d/go-billy.v2/osfs"
 )
 
 var version = ""
 
 const (
-	appLuaFile = "app.lua"
+	faderLuaFileName = "fader.lua"
 )
 
 var workspace = flag.String("workspace", "_workspace", "Path to work directory")
@@ -31,12 +35,14 @@ var (
 	cfg    *core.Config
 	tpls   *jet.Set
 	routes *httprouter.Router
+	fs     billy.Filesystem
 )
 
 func main() {
 	flag.Parse()
 
 	tpls = jet.NewHTMLSet(*workspace)
+	fs = osfs.New(*workspace).Dir("")
 	routes = httprouter.New()
 	loadSetting()
 	showCfg()
@@ -94,14 +100,15 @@ func destroy() {
 func loadSetting() {
 	log.Println("load settings")
 	var err error
-	cfg, err = core.LoadConfigFromLua([]byte(`
-	defMiddlewares = {"index.lua", "index.lua"}
-	defLicenses = {"guest"}
-	cfg():AddRoute("GET", "/foo/:bar", "index.jet", "index.lua", defLicenses)
-	cfg():Dev(true)
-`))
+	fader, err := fs.Open(faderLuaFileName)
 	if err != nil {
-		log.Fatal("load config from lua", err)
+		log.Fatalf("open %q: %s", faderLuaFileName, err)
+	}
+	faderSettings := new(bytes.Buffer)
+	io.Copy(faderSettings, fader)
+	cfg, err = core.LoadConfigFromLua(faderSettings.Bytes())
+	if err != nil {
+		log.Fatal("init fader settings (from lua):", err)
 	}
 
 	tpls.SetDevelopmentMode(cfg.Dev)
