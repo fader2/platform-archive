@@ -30,5 +30,5 @@ _testmain.go
 .env
 _*
 
-FaderWorkspace
+
 coverage.out

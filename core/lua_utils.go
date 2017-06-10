@@ -1,7 +1,9 @@
-package api
+package core
 
 import (
 	"log"
+
+	"reflect"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -54,6 +56,8 @@ func ToValueFromLValue(v lua.LValue) interface{} {
 
 func ToLValueOrNil(v interface{}, L *lua.LState) lua.LValue {
 	switch v := v.(type) {
+	case reflect.Value:
+		return ToLValueOrNil(v.Interface(), L)
 	case int, int8, int32, int64, float32, float64,
 		uint, uint8, uint16, uint32, uint64:
 
@@ -176,4 +180,37 @@ func ToLValueOrNil(v interface{}, L *lua.LState) lua.LValue {
 	}
 
 	return lua.LNil
+}
+
+func ToFloat64(v interface{}) (f float64) {
+	switch _v := v.(type) {
+	case int:
+		f = float64(_v)
+	case int16:
+		f = float64(_v)
+	case int32:
+		f = float64(_v)
+	case int64:
+		f = float64(_v)
+	case int8:
+		f = float64(_v)
+	case float32:
+		f = float64(_v)
+	case float64:
+		f = float64(_v)
+	case uint:
+		f = float64(_v)
+	case uint16:
+		f = float64(_v)
+	case uint32:
+		f = float64(_v)
+	case uint64:
+		f = float64(_v)
+	case uint8:
+		f = float64(_v)
+	default:
+		f = 0
+	}
+
+	return
 }
