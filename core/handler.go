@@ -1,12 +1,17 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
+
+	billy "gopkg.in/src-d/go-billy.v2"
 
 	"log"
 
 	"encoding/json"
+
+	"io"
 
 	"github.com/CloudyKit/jet"
 	"github.com/julienschmidt/httprouter"
@@ -24,7 +29,7 @@ var (
 	}
 )
 
-func EntrypointHandler(cfg *Config, route Route, tpls *jet.Set) func(
+func EntrypointHandler(fs billy.Filesystem, cfg *Config, route Route, tpls *jet.Set) func(
 	w http.ResponseWriter,
 	r *http.Request,
 	ps httprouter.Params,
@@ -34,6 +39,13 @@ func EntrypointHandler(cfg *Config, route Route, tpls *jet.Set) func(
 		r *http.Request,
 		ps httprouter.Params,
 	) {
+		if IsMaintenance() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Header().Set("Retry-After", "120")
+			w.Write([]byte("Maintenance. Please retry after 120 sec."))
+			return
+		}
+
 		/*
 			- find template
 			- setup context and lua executor
@@ -70,7 +82,18 @@ func EntrypointHandler(cfg *Config, route Route, tpls *jet.Set) func(
 
 		// execute all middlewares
 		for _, middleware := range route.Middlewares {
-			if err := L.DoFile(cfg.Workspace + "/" + middleware); err != nil {
+			f, err := fs.Open(middleware)
+			if err != nil {
+				log.Printf(
+					"error execute middleware %s, %s",
+					middleware,
+					err,
+				)
+				continue
+			}
+			d := new(bytes.Buffer)
+			io.Copy(d, f)
+			if err := L.DoString(d.String()); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte("Internal server"))
 				log.Printf(

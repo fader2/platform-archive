@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"log"
 
@@ -36,6 +38,8 @@ var (
 	tpls   *jet.Set
 	routes *httprouter.Router
 	fs     billy.Filesystem
+
+	frontendServer *http.Server
 )
 
 func main() {
@@ -43,15 +47,10 @@ func main() {
 
 	tpls = jet.NewHTMLSet(*workspace)
 	fs = osfs.New(*workspace).Dir("")
-	routes = httprouter.New()
 	loadSetting()
 	showCfg()
 
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", *port),
-		Handler: routes,
-	}
-	server.ListenAndServe()
+	go continueFrontend()
 
 	////////////////////////////////////////////////////////////////////////////
 	// graceful exit
@@ -99,6 +98,8 @@ func destroy() {
 
 func loadSetting() {
 	log.Println("load settings")
+	routes = httprouter.New()
+
 	var err error
 	fader, err := fs.Open(faderLuaFileName)
 	if err != nil {
@@ -119,6 +120,7 @@ func loadSetting() {
 			strings.ToUpper(route.Method),
 			route.Path,
 			core.EntrypointHandler(
+				fs,
 				cfg,
 				route,
 				tpls,
@@ -137,13 +139,30 @@ func loadSetting() {
 
 func continueFrontend() {
 	log.Println("run frontend server")
-
 	core.SetMaintenance(false)
+	go startFrontendServer()
+}
+
+func startFrontendServer() {
+	frontendServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", *port),
+		Handler: routes,
+	}
+	if err := frontendServer.ListenAndServe(); err != nil {
+		log.Println("listen frontend server:", err)
+	}
+}
+
+func stopFrontendServer() {
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	frontendServer.Shutdown(ctx)
+	log.Println("frontend server gracefully stopped")
 }
 
 func stopFrontend() {
 	log.Println("stop frontend server")
 	core.SetMaintenance(true)
+	stopFrontendServer()
 }
 
 func showCfg() {
