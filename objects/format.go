@@ -1,4 +1,4 @@
-package boltdb
+package objects
 
 import (
 	"errors"
@@ -7,17 +7,17 @@ import (
 
 // Reader
 
-func newReader(r io.Reader) *objReader {
-	return &objReader{
+func NewReader(r io.Reader) *ObjectReader {
+	return &ObjectReader{
 		raw: r,
 	}
 }
 
-type objReader struct {
+type ObjectReader struct {
 	raw io.Reader
 }
 
-func (r *objReader) Header() (t ObjectType, ct string, err error) {
+func (r *ObjectReader) Header() (t ObjectType, ct string, err error) {
 	tb, err := r.readUntil(' ')
 	if err != nil {
 		return
@@ -31,7 +31,7 @@ func (r *objReader) Header() (t ObjectType, ct string, err error) {
 	return
 }
 
-func (r *objReader) readUntil(delim byte) ([]byte, error) {
+func (r *ObjectReader) readUntil(delim byte) ([]byte, error) {
 	var buf [1]byte
 	value := make([]byte, 0, 255)
 	for {
@@ -50,27 +50,27 @@ func (r *objReader) readUntil(delim byte) ([]byte, error) {
 	}
 }
 
-func (w *objReader) Read(p []byte) (n int, err error) {
+func (w *ObjectReader) Read(p []byte) (n int, err error) {
 	return w.raw.Read(p)
 }
 
-func (w *objReader) Close() error {
+func (w *ObjectReader) Close() error {
 	return nil
 }
 
 // Writer
 
-func newWriter(w io.Writer) *objWriter {
-	return &objWriter{
+func NewWriter(w io.Writer) *ObjectWriter {
+	return &ObjectWriter{
 		raw: w,
 	}
 }
 
-type objWriter struct {
+type ObjectWriter struct {
 	raw io.Writer
 }
 
-func (w *objWriter) WriteHeader(
+func (w *ObjectWriter) WriteHeader(
 	t ObjectType,
 	ct string, // content type (recommended used mime type)
 ) (err error) {
@@ -83,10 +83,10 @@ func (w *objWriter) WriteHeader(
 	return err
 }
 
-func (w *objWriter) Write(p []byte) (n int, err error) {
+func (w *ObjectWriter) Write(p []byte) (n int, err error) {
 	return w.raw.Write(p)
 }
 
-func (w *objWriter) Close() error {
+func (w *ObjectWriter) Close() error {
 	return nil
 }

@@ -1,3 +1,0 @@
-package boltdb
-
-// blob

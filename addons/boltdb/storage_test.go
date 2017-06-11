@@ -1,51 +1,34 @@
 package boltdb
 
 import (
-	"os"
 	"testing"
-	"time"
 
 	"io/ioutil"
 
 	"bytes"
 
-	"github.com/boltdb/bolt"
+	"github.com/fader2/platform/objects"
 	uuid "github.com/satori/go.uuid"
 )
 
-func TestGetSetObject(t *testing.T) {
-	defer func() {
-		os.RemoveAll("_fortesting.db")
-	}()
-
-	db, err := bolt.Open(
-		"_fortesting.db",
-		0600,
-		&bolt.Options{
-			Timeout: 1 * time.Second,
-		},
-	)
-	if err != nil {
-		t.Fatal("setup db", err)
-	}
-
+func TestGetSetAnyObject(t *testing.T) {
 	// new object
 
 	s := NewBlobStorage(db, "_______fortesting")
 	obj := s.NewEncodedObject(uuid.NewV4())
-	obj.SetType(BlobObject)
+	obj.SetType(objects.BlobObject)
 	w, _ := obj.Writer()
 	wantData := []byte("abcd1234")
 	w.Write(wantData)
 
-	_, err = s.SetEncodedObject(obj)
+	_, err := s.SetEncodedObject(obj)
 	if err != nil {
 		t.Fatal("add new object", err)
 	}
 
 	// get new object
 
-	gotObj, err := s.EncodedObject(BlobObject, obj.ID())
+	gotObj, err := s.EncodedObject(objects.BlobObject, obj.ID())
 	if err != nil {
 		t.Fatal("got object by ID", err)
 	}
@@ -57,5 +40,31 @@ func TestGetSetObject(t *testing.T) {
 		wantData,
 	) {
 		t.Fatal("not expected data", err)
+	}
+}
+
+func TestBlob(t *testing.T) {
+
+	blob := &objects.Blob{
+		ID:          uuid.NewV4(),
+		ContentType: "text/plain",
+	}
+	blob.Data = []byte("Abc")
+
+	s := NewBlobStorage(db, "_______fortesting")
+
+	_, err := objects.SetBlob(s, blob)
+	if err != nil {
+		t.Fatal("save blob by id", err)
+	}
+
+	//
+
+	blob, err = objects.GetBlob(s, blob.ID)
+	if err != nil {
+		t.Fatal("find blob by id", err)
+	}
+	if blob.ContentType != "text/plain" {
+		t.Fatal("not expected content type")
 	}
 }

@@ -1,4 +1,4 @@
-package boltdb
+package objects
 
 import "testing"
 import "bytes"

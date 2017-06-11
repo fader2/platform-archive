@@ -8,28 +8,11 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
+	"github.com/fader2/platform/objects"
 	uuid "github.com/satori/go.uuid"
 )
 
-type Storer interface {
-	NewEncodedObject(uuid.UUID) EncodedObject
-	EncodedObject(ObjectType, uuid.UUID) (EncodedObject, error)
-	SetEncodedObject(obj EncodedObject) (uuid.UUID, error)
-}
-
-type EncodedObject interface {
-	ID() uuid.UUID
-	Type() ObjectType
-	SetType(ObjectType)
-	ContentType() string
-	SetContentType(string)
-	Size() int64
-	SetSize(int64)
-	Reader() (io.ReadCloser, error)
-	Writer() (io.WriteCloser, error)
-}
-
-var _ Storer = (*BoltdbStorage)(nil)
+var _ objects.Storer = (*BoltdbStorage)(nil)
 
 func NewBlobStorage(db *bolt.DB, name string) *BoltdbStorage {
 	return &BoltdbStorage{db, name}
@@ -40,13 +23,11 @@ type BoltdbStorage struct {
 	bucket string
 }
 
-func (o *BoltdbStorage) NewEncodedObject(id uuid.UUID) EncodedObject {
-	return &obj{
-		id: id,
-	}
+func (o *BoltdbStorage) NewEncodedObject(id uuid.UUID) objects.EncodedObject {
+	return objects.NewObject(id)
 }
 
-func (s *BoltdbStorage) EncodedObject(_type ObjectType, id uuid.UUID) (EncodedObject, error) {
+func (s *BoltdbStorage) EncodedObject(_type objects.ObjectType, id uuid.UUID) (objects.EncodedObject, error) {
 	var buf = new(bytes.Buffer)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(s.bucket))
@@ -56,7 +37,7 @@ func (s *BoltdbStorage) EncodedObject(_type ObjectType, id uuid.UUID) (EncodedOb
 	if err != nil {
 		return nil, err
 	}
-	or := newReader(buf)
+	or := objects.NewReader(buf)
 	defer or.Close()
 	gotType, gotContentType, err := or.Header()
 	if err != nil {
@@ -82,13 +63,13 @@ func (s *BoltdbStorage) EncodedObject(_type ObjectType, id uuid.UUID) (EncodedOb
 	return obj, nil
 }
 
-func (s *BoltdbStorage) SetEncodedObject(obj EncodedObject) (
+func (s *BoltdbStorage) SetEncodedObject(obj objects.EncodedObject) (
 	id uuid.UUID,
 	err error,
 ) {
 	id = obj.ID()
 	buf := new(bytes.Buffer)
-	ow := newWriter(buf)
+	ow := objects.NewWriter(buf)
 	if err := ow.WriteHeader(obj.Type(), obj.ContentType()); err != nil {
 		return id, fmt.Errorf("write header %s", err)
 	}
