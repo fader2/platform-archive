@@ -68,7 +68,9 @@ func main() {
 	cfg.AppPath = appRootPath
 	cfg.AppLua = appLuaFile
 	cfg.Version = version
-	BootstrapAddons(cfg)
+	if err := BootstrapAddons(cfg); err != nil {
+		log.Fatal(err)
+	}
 
 	showCfg()
 	go continueFrontend()

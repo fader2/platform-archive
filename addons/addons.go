@@ -5,6 +5,8 @@ import (
 
 	"github.com/fader2/platform/config"
 
+	"fmt"
+
 	"github.com/CloudyKit/jet"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -35,10 +37,13 @@ func PreloadLuaModules(L *lua.LState) {
 	}
 }
 
-func Bootstrap(cfg *config.Config) {
+func Bootstrap(cfg *config.Config) error {
 	for _, addon := range Addons {
-		addon.Bootstrap(cfg)
+		if err := addon.Bootstrap(cfg); err != nil {
+			return fmt.Errorf("bootstrap %q, %s", addon.Name(), err)
+		}
 	}
+	return nil
 }
 
 func AppendJetLoaders(loaders ...jet.Loader) []jet.Loader {

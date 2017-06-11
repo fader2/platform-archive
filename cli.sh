@@ -4,6 +4,11 @@ newaddon() {
 	NAME=$1
 	ADDONPATH=addons/$1
 
+	if [ -d "$ADDONPATH" ]; then
+		echo Abort. $ADDONPATH exists
+		exit 0
+	fi
+
 	mkdir -p $ADDONPATH
 	mkdir -p $ADDONPATH/views
 	mkdir -p $ADDONPATH/assets
@@ -80,8 +85,11 @@ import (
 
 const NAME = "$NAME"
 
+var addon *Addon
+
 func init() {
-	addons.Register(&Addon{})
+	addon = &Addon{}
+	addons.Register(addon)
 }
 
 type Addon struct {

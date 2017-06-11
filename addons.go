@@ -6,6 +6,7 @@ import (
 	"github.com/fader2/platform/config"
 
 	// addons
+	_ "github.com/fader2/platform/addons/boltdb"
 	_ "github.com/fader2/platform/addons/foo"
 )
 
@@ -13,6 +14,6 @@ var (
 	assets *multi.Multi
 )
 
-func BootstrapAddons(cfg *config.Config) {
-	addons.Bootstrap(cfg)
+func BootstrapAddons(cfg *config.Config) error {
+	return addons.Bootstrap(cfg)
 }

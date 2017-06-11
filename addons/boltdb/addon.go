@@ -1,27 +1,32 @@
-package foo
+package boltdb
 
 import (
 	"bytes"
 	"io"
 	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/CloudyKit/jet"
 	"github.com/CloudyKit/jet/loaders/httpfs"
+	"github.com/boltdb/bolt"
 	"github.com/fader2/platform/addons"
+	"github.com/fader2/platform/addons/boltdb/assets/templates"
 	"github.com/fader2/platform/config"
-	"github.com/fader2/platform/addons/foo/assets/templates"
 	lua "github.com/yuin/gopher-lua"
-
-	
 )
 
-const NAME = "foo"
+const NAME = "boltdb"
+
+var addon *Addon
 
 func init() {
-	addons.Register(&Addon{})
+	addon = &Addon{}
+	addons.Register(addon)
 }
 
 type Addon struct {
+	db *bolt.DB
 }
 
 func (a *Addon) Name() string {
@@ -29,7 +34,19 @@ func (a *Addon) Name() string {
 }
 
 func (a *Addon) Bootstrap(cfg *config.Config) error {
-	// TODO: bootstrap
+	dbpath := filepath.Join(cfg.Workspace, "_boltdb.db")
+	db, err := bolt.Open(
+		dbpath,
+		0600,
+		&bolt.Options{
+			Timeout: 1 * time.Second,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	a.db = db
+
 	return nil
 }
 
@@ -68,5 +85,10 @@ var exports = map[string]lua.LGFunction{
 		}
 		return 0
 	},
+	"Set": func(L *lua.LState) int {
+		return 1
+	},
+	"Get": func(L *lua.LState) int {
+		return 0
+	},
 }
-
