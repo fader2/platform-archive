@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync/atomic"
 
+	"github.com/CloudyKit/jet"
 	"github.com/fader2/platform/addons"
 	"github.com/fader2/platform/utils"
 	lua "github.com/yuin/gopher-lua"
@@ -15,8 +16,14 @@ var (
 )
 
 type Config struct {
-	Dev       bool
-	Workspace string // read only
+	Dev bool
+
+	Workspace string
+	AppLua    string
+	AppPath   string
+	Version   string
+
+	Vars jet.VarMap
 
 	Routs         []Route
 	NotFoundPage  Route
@@ -33,7 +40,9 @@ type Route struct {
 
 // LoadConfigFromLua Initializes the config based on the lua script
 func LoadConfigFromLua(raw []byte) (c *Config, err error) {
-	c = &Config{}
+	c = &Config{
+		Vars: make(jet.VarMap),
+	}
 
 	L := lua.NewState()
 	defer L.Close()
@@ -70,13 +79,21 @@ func IsMaintenance() bool {
 const luaCfgTypeName = "cfg"
 
 func luaSetCfg(L *lua.LState, c *Config) {
-	L.SetGlobal("cfg", L.NewFunction(luaCfgBuilder(c)))
+	L.SetGlobal("cfg", L.NewFunction(LuaCfgFromCfg(c)))
 	mt := L.NewTypeMetatable(luaCfgTypeName)
 	L.SetField(mt, "__index", L.SetFuncs(L.NewTable(), luaCfgMethods))
 	return
 }
 
-func luaCfgBuilder(cfg *Config) func(L *lua.LState) int {
+// LuaSetReadOnlyCfg set a global new type object. Config read only
+func LuaSetReadOnlyCfg(L *lua.LState, c *Config) {
+	L.SetGlobal("cfg", L.NewFunction(LuaCfgFromCfg(c)))
+	mt := L.NewTypeMetatable(luaCfgTypeName)
+	L.SetField(mt, "__index", L.SetFuncs(L.NewTable(), luaCfgReadOnlyMethods))
+	return
+}
+
+func LuaCfgFromCfg(cfg *Config) func(L *lua.LState) int {
 	return func(L *lua.LState) int {
 		ud := L.NewUserData()
 		ud.Value = cfg
@@ -99,9 +116,23 @@ func LuaCheckCfg(L *lua.LState) *Config {
 	return nil
 }
 
-var luaCfgMethods = map[string]lua.LGFunction{
-	"name": func(L *lua.LState) int { return 0 },
+var luaCfgReadOnlyMethods = map[string]lua.LGFunction{
+	"Dev": func(L *lua.LState) int {
+		cfg := LuaCheckCfg(L)
+		L.Push(lua.LBool(cfg.Dev))
+		return 1
+	},
+	"Get": luaCfg_GetVar,
+	"Workspace": func(L *lua.LState) int {
+		cfg := LuaCheckCfg(L)
+		L.Push(lua.LString(cfg.Workspace))
+		return 1
+	},
+}
 
+var luaCfgMethods = map[string]lua.LGFunction{
+	"Get": luaCfg_GetVar,
+	"Set": luaCfg_SetVar,
 	/*
 		AddRoute добавить роут
 		- method
@@ -197,4 +228,30 @@ func luaCfg_RouteFromLuaFn(L *lua.LState) (route Route) {
 		log.Printf("unexpected type array of middlewares %T \n", anyi)
 	}
 	return
+}
+
+func luaCfg_GetVar(L *lua.LState) int {
+	cfg := LuaCheckCfg(L)
+	k := L.CheckString(2)
+	v := cfg.Vars[k]
+	lv := utils.ToLValueOrNil(v, L)
+	if lv == nil {
+		log.Printf("cfg.Get(): not supported type, got %T, key %s", v, k)
+		return 0
+	}
+	L.Push(lv)
+	return 1
+}
+
+func luaCfg_SetVar(L *lua.LState) int {
+	cfg := LuaCheckCfg(L)
+	k := L.CheckString(2)
+	lv := L.CheckAny(3)
+	v := utils.ToValueFromLValue(lv)
+	if v == nil {
+		log.Printf("cfg.Set(): not supported type, got %T, key %s", lv, k)
+		return 0
+	}
+	cfg.Vars.Set(k, v)
+	return 1
 }

@@ -88,6 +88,7 @@ func EntrypointHandler(
 			vars,
 		)
 		luaSetNewCtx(L, ctx)
+		config.LuaSetReadOnlyCfg(L, cfg)
 
 		// set request options
 		for _, param := range ps {

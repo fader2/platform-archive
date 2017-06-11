@@ -57,7 +57,9 @@ func ToValueFromLValue(v lua.LValue) interface{} {
 func ToLValueOrNil(v interface{}, L *lua.LState) lua.LValue {
 	switch v := v.(type) {
 	case reflect.Value:
-		return ToLValueOrNil(v.Interface(), L)
+		if v.IsValid() {
+			return ToLValueOrNil(v.Interface(), L)
+		}
 	case int, int8, int32, int64, float32, float64,
 		uint, uint8, uint16, uint32, uint64:
 

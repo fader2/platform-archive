@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -30,7 +31,8 @@ import (
 var version = ""
 
 const (
-	faderLuaFileName = "fader.lua"
+	appLuaFileName = "app.lua"
+	appFolderName  = "app"
 )
 
 var workspace = flag.String("workspace", "_workspace", "Path to work directory")
@@ -48,9 +50,12 @@ var (
 func main() {
 	flag.Parse()
 
+	appRootPath := filepath.Join(*workspace, appFolderName)
+	appLuaFile := filepath.Join(*workspace, appLuaFileName)
+
 	assets = multi.NewLoader(
 		addons.AppendJetLoaders(
-			jet.NewOSFileSystemLoader(*workspace),
+			jet.NewOSFileSystemLoader(appRootPath),
 		)...,
 	)
 
@@ -58,6 +63,10 @@ func main() {
 
 	fs = osfs.New(*workspace).Dir("")
 	loadSetting()
+	cfg.Workspace = *workspace
+	cfg.AppPath = appRootPath
+	cfg.AppLua = appLuaFile
+	cfg.Version = version
 	showCfg()
 	go continueFrontend()
 
@@ -104,9 +113,9 @@ func loadSetting() {
 	routes = httprouter.New()
 
 	var err error
-	fader, err := fs.Open(faderLuaFileName)
+	fader, err := fs.Open(appLuaFileName)
 	if err != nil {
-		log.Fatalf("open %q: %s", faderLuaFileName, err)
+		log.Fatalf("open %q: %s", appLuaFileName, err)
 	}
 	faderSettings := new(bytes.Buffer)
 	io.Copy(faderSettings, fader)
@@ -116,7 +125,6 @@ func loadSetting() {
 	}
 
 	tpls.SetDevelopmentMode(cfg.Dev)
-	cfg.Workspace = *workspace
 
 	for _, route := range cfg.Routs {
 		routes.Handle(

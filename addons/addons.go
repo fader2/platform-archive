@@ -1,6 +1,8 @@
 package addons
 
 import (
+	"log"
+
 	"github.com/CloudyKit/jet"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -19,6 +21,7 @@ type Addon interface {
 
 func Register(addon Addon) {
 	Addons[addon.Name()] = addon
+	log.Println("add addon", addon.Name())
 }
 
 func PreloadLuaModules(L *lua.LState) {
