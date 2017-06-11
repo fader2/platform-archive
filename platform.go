@@ -24,6 +24,7 @@ import (
 	"github.com/fader2/platform/config"
 	"github.com/fader2/platform/core"
 	"github.com/julienschmidt/httprouter"
+	lua "github.com/yuin/gopher-lua"
 	billy "gopkg.in/src-d/go-billy.v2"
 	"gopkg.in/src-d/go-billy.v2/osfs"
 )
@@ -67,6 +68,8 @@ func main() {
 	cfg.AppPath = appRootPath
 	cfg.AppLua = appLuaFile
 	cfg.Version = version
+	BootstrapAddons(cfg)
+
 	showCfg()
 	go continueFrontend()
 
@@ -110,22 +113,32 @@ func destroy() {
 
 func loadSetting() {
 	log.Println("load settings")
-	routes = httprouter.New()
 
+	routes = httprouter.New()
+	cfg = config.New()
+
+	// load app.lua file
 	var err error
 	fader, err := fs.Open(appLuaFileName)
 	if err != nil {
 		log.Fatalf("open %q: %s", appLuaFileName, err)
 	}
-	faderSettings := new(bytes.Buffer)
-	io.Copy(faderSettings, fader)
-	cfg, err = config.LoadConfigFromLua(faderSettings.Bytes())
-	if err != nil {
-		log.Fatal("init fader settings (from lua):", err)
+	_data := new(bytes.Buffer)
+	io.Copy(_data, fader)
+
+	// execute app.lua file
+	L := lua.NewState()
+	defer L.Close()
+	config.LuaSetCfg(L, cfg)
+	addons.PreloadLuaModules(L)
+	if err = L.DoString(_data.String()); err != nil {
+		log.Fatal("init settings (from lua):", err)
+		return
 	}
 
 	tpls.SetDevelopmentMode(cfg.Dev)
 
+	// setup routes from cfg
 	for _, route := range cfg.Routs {
 		routes.Handle(
 			strings.ToUpper(route.Method),

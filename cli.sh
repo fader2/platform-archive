@@ -15,6 +15,11 @@ build:
 .PHONY: build
 EOF
 
+	cat > $ADDONPATH/views/addons.${NAME}___bootstrap.lua << EOF
+print("bootstrap $NAME")
+cfg():Set("$NAME", "init OK")
+EOF
+
 	cat > $ADDONPATH/assets/generate.go << EOF
 // +build ignore
 
@@ -59,13 +64,21 @@ EOF
 package $NAME
 
 import (
+	"bytes"
+	"io"
+	"os"
+
 	"github.com/CloudyKit/jet"
 	"github.com/CloudyKit/jet/loaders/httpfs"
 	"github.com/fader2/platform/addons"
-	"github.com/fader2/platform/addons/$NAME/assets/templates"
 	"github.com/fader2/platform/config"
+	"github.com/fader2/platform/addons/$NAME/assets/templates"
 	lua "github.com/yuin/gopher-lua"
+
+	
 )
+
+const NAME = "$NAME"
 
 func init() {
 	addons.Register(&Addon{})
@@ -75,7 +88,12 @@ type Addon struct {
 }
 
 func (a *Addon) Name() string {
-	return "$NAME"
+	return NAME
+}
+
+func (a *Addon) Bootstrap(cfg *config.Config) error {
+	// TODO: bootstrap
+	return nil
 }
 
 func (a *Addon) LuaModule() lua.LGFunction {
@@ -92,7 +110,28 @@ func (a *Addon) AssetsLoader() jet.Loader {
 	return httpfs.NewLoader(templates.Assets)
 }
 
-var exports = map[string]lua.LGFunction{}
+var exports = map[string]lua.LGFunction{
+	"Init": func(L *lua.LState) int {
+		f, err := templates.Assets.Open(
+			"addons." + NAME + "___bootstrap.lua",
+		)
+		if os.IsNotExist(err) {
+			return 0
+		}
+		if err != nil {
+			L.RaiseError("bootstrap %s: %s", NAME, err)
+			return 0
+		}
+		defer f.Close()
+
+		bootstrap := new(bytes.Buffer)
+		io.Copy(bootstrap, f)
+		if err := L.DoString(bootstrap.String()); err != nil {
+			L.RaiseError("bootstrap %s: load cfg: %s", NAME, err)
+		}
+		return 0
+	},
+}
 
 EOF
 }

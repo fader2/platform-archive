@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 
 	"github.com/CloudyKit/jet"
-	"github.com/fader2/platform/addons"
 	"github.com/fader2/platform/utils"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -38,24 +37,10 @@ type Route struct {
 	Roles       []string // permissible roles to the resource
 }
 
-// LoadConfigFromLua Initializes the config based on the lua script
-func LoadConfigFromLua(raw []byte) (c *Config, err error) {
-	c = &Config{
+func New() *Config {
+	return &Config{
 		Vars: make(jet.VarMap),
 	}
-
-	L := lua.NewState()
-	defer L.Close()
-
-	luaSetCfg(L, c)
-
-	addons.PreloadLuaModules(L)
-
-	if err = L.DoString(string(raw)); err != nil {
-		return
-	}
-
-	return
 }
 
 // Utils
@@ -78,7 +63,7 @@ func IsMaintenance() bool {
 
 const luaCfgTypeName = "cfg"
 
-func luaSetCfg(L *lua.LState, c *Config) {
+func LuaSetCfg(L *lua.LState, c *Config) {
 	L.SetGlobal("cfg", L.NewFunction(LuaCfgFromCfg(c)))
 	mt := L.NewTypeMetatable(luaCfgTypeName)
 	L.SetField(mt, "__index", L.SetFuncs(L.NewTable(), luaCfgMethods))
