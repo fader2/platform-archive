@@ -15,8 +15,6 @@ type Blob struct {
 	ContentType string // mime
 
 	Data []byte
-
-	obj EncodedObject
 }
 
 func GetBlob(s Storer, id uuid.UUID) (*Blob, error) {
@@ -41,10 +39,9 @@ func DecodeBlob(o EncodedObject) (*Blob, error) {
 		ID:          o.ID(),
 		Size:        o.Size(),
 		ContentType: o.ContentType(),
-		obj:         o,
 	}
 
-	return obj, nil
+	return obj, obj.Decode(o)
 }
 
 func (b *Blob) Decode(o EncodedObject) error {
@@ -54,13 +51,17 @@ func (b *Blob) Decode(o EncodedObject) error {
 
 	b.ID = o.ID()
 	b.ContentType = o.ContentType()
-	buf := bytes.NewBuffer(b.Data)
+	buf := bytes.NewBuffer(make([]byte, 0, o.Size()))
 	r, err := o.Reader()
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 	_, err = io.Copy(buf, r)
+	if err != nil {
+		return err
+	}
+	b.Data = buf.Bytes()
 
 	return err
 }
@@ -73,17 +74,7 @@ func (b *Blob) Encode(o EncodedObject) error {
 		return err
 	}
 	defer w.Close()
-	buf := bytes.NewBuffer(b.Data)
-	defer w.Close()
-	_, err = io.Copy(w, buf)
+	_, err = io.Copy(w, bytes.NewReader(b.Data))
 
 	return err
-}
-
-func (b *Blob) Reader() (io.ReadCloser, error) {
-	return b.obj.Reader()
-}
-
-func (b *Blob) Writer() (io.WriteCloser, error) {
-	return b.obj.Writer()
 }

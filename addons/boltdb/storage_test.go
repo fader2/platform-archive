@@ -57,6 +57,7 @@ func TestBlob(t *testing.T) {
 	if err != nil {
 		t.Fatal("save blob by id", err)
 	}
+	wantData := blob.Data
 
 	//
 
@@ -66,5 +67,14 @@ func TestBlob(t *testing.T) {
 	}
 	if blob.ContentType != "text/plain" {
 		t.Fatal("not expected content type")
+	}
+	if len(blob.Data) == 0 {
+		t.Fatal("empty data")
+	}
+	if !bytes.Equal(
+		blob.Data,
+		wantData,
+	) {
+		t.Fatal("not expected data")
 	}
 }
