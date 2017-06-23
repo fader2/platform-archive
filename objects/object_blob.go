@@ -9,10 +9,16 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+func EmptyBlob() *Blob {
+	return &Blob{
+		Meta: Meta{Meta: make(map[string]string)},
+	}
+}
+
 type Blob struct {
-	ID          uuid.UUID
-	Size        int64
-	ContentType string // mime
+	ID   uuid.UUID
+	Size int64
+	Meta Meta
 
 	Data []byte
 }
@@ -36,9 +42,9 @@ func SetBlob(s Storer, b *Blob) (uuid.UUID, error) {
 
 func DecodeBlob(o EncodedObject) (*Blob, error) {
 	obj := &Blob{
-		ID:          o.ID(),
-		Size:        o.Size(),
-		ContentType: o.ContentType(),
+		ID:   o.ID(),
+		Size: o.Size(),
+		Meta: o.Meta(),
 	}
 
 	return obj, obj.Decode(o)
@@ -50,7 +56,7 @@ func (b *Blob) Decode(o EncodedObject) error {
 	}
 
 	b.ID = o.ID()
-	b.ContentType = o.ContentType()
+	b.Meta = o.Meta()
 	buf := bytes.NewBuffer(make([]byte, 0, o.Size()))
 	r, err := o.Reader()
 	if err != nil {
@@ -68,7 +74,7 @@ func (b *Blob) Decode(o EncodedObject) error {
 
 func (b *Blob) Encode(o EncodedObject) error {
 	o.SetType(BlobObject)
-	o.SetContentType(b.ContentType)
+	o.SetMeta(b.Meta)
 	w, err := o.Writer()
 	if err != nil {
 		return err

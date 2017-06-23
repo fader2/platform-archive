@@ -15,8 +15,12 @@ const (
 	BlobObject    ObjectType = "blob"
 )
 
+func (t ObjectType) String() string {
+	return string(t)
+}
+
 func (t ObjectType) Bytes() []byte {
-	return []byte(string(t))
+	return []byte(t.String())
 }
 
 var _ EncodedObject = (*Object)(nil)
@@ -28,7 +32,7 @@ func NewObject(id uuid.UUID) *Object {
 type Object struct {
 	id uuid.UUID
 	t  ObjectType
-	ct string // content type
+	m  Meta // content type
 	d  []byte
 	sz int64
 }
@@ -49,12 +53,12 @@ func (o *Object) Type() ObjectType {
 	return o.t
 }
 
-func (o *Object) ContentType() string {
-	return o.ct
+func (o *Object) Meta() Meta {
+	return o.m
 }
 
-func (o *Object) SetContentType(ct string) {
-	o.ct = ct
+func (o *Object) SetMeta(m Meta) {
+	o.m = m
 }
 
 func (o *Object) SetType(t ObjectType) {

@@ -1,5 +1,10 @@
 package utils
 
+import (
+	"encoding/binary"
+	"math"
+)
+
 func ToFloat64(v interface{}) (f float64) {
 	switch _v := v.(type) {
 	case int:
@@ -31,4 +36,17 @@ func ToFloat64(v interface{}) (f float64) {
 	}
 
 	return
+}
+
+func Float64frombytes(bytes []byte) float64 {
+	bits := binary.LittleEndian.Uint64(bytes)
+	float := math.Float64frombits(bits)
+	return float
+}
+
+func Float64bytes(float float64) []byte {
+	bits := math.Float64bits(float)
+	bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytes, bits)
+	return bytes
 }

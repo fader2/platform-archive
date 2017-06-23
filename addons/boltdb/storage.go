@@ -39,7 +39,7 @@ func (s *BoltdbStorage) EncodedObject(_type objects.ObjectType, id uuid.UUID) (o
 	}
 	or := objects.NewReader(buf)
 	defer or.Close()
-	gotType, gotContentType, err := or.Header()
+	gotType, gotMeta, err := or.Header()
 	if err != nil {
 		return nil, fmt.Errorf("read header %s", err)
 	}
@@ -50,8 +50,8 @@ func (s *BoltdbStorage) EncodedObject(_type objects.ObjectType, id uuid.UUID) (o
 
 	obj := s.NewEncodedObject(id)
 	obj.SetType(gotType)
+	obj.SetMeta(gotMeta)
 	obj.SetSize(int64(buf.Len()))
-	obj.SetContentType(gotContentType)
 	w, err := obj.Writer()
 	if err != nil {
 		return nil, fmt.Errorf("get object writer %s", err)
@@ -70,7 +70,7 @@ func (s *BoltdbStorage) SetEncodedObject(obj objects.EncodedObject) (
 	id = obj.ID()
 	buf := new(bytes.Buffer)
 	ow := objects.NewWriter(buf)
-	if err := ow.WriteHeader(obj.Type(), obj.ContentType()); err != nil {
+	if err := ow.WriteHeader(obj.Type(), obj.Meta()); err != nil {
 		return id, fmt.Errorf("write header %s", err)
 	}
 

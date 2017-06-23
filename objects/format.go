@@ -17,17 +17,17 @@ type ObjectReader struct {
 	raw io.Reader
 }
 
-func (r *ObjectReader) Header() (t ObjectType, ct string, err error) {
+func (r *ObjectReader) Header() (t ObjectType, m Meta, err error) {
 	tb, err := r.readUntil(' ')
 	if err != nil {
 		return
 	}
-	ctb, err := r.readUntil(' ')
+	mb, err := r.readUntil(' ')
 	if err != nil {
 		return
 	}
 	t = ObjectType(string(tb))
-	ct = string(ctb)
+	err = m.Unmarshal(mb)
 	return
 }
 
@@ -72,11 +72,16 @@ type ObjectWriter struct {
 
 func (w *ObjectWriter) WriteHeader(
 	t ObjectType,
-	ct string, // content type (recommended used mime type)
+	m Meta,
 ) (err error) {
+	mb, err := m.Marshal() // meta bytes
+	if err != nil {
+		return err
+	}
+
 	b := t.Bytes()
 	b = append(b, ' ')
-	b = append(b, ct...)
+	b = append(b, mb...)
 	b = append(b, ' ')
 
 	_, err = w.Write(b)

@@ -33,9 +33,9 @@ func (a *Addon) Name() string {
 	return NAME
 }
 
-func (a *Addon) Bootstrap(cfg *config.Config) error {
+func (a *Addon) Bootstrap(cfg *config.Config) (err error) {
 	dbpath := filepath.Join(cfg.Workspace, "_boltdb.db")
-	db, err := bolt.Open(
+	a.db, err = bolt.Open(
 		dbpath,
 		0600,
 		&bolt.Options{
@@ -45,7 +45,6 @@ func (a *Addon) Bootstrap(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	a.db = db
 
 	return nil
 }
@@ -54,6 +53,8 @@ func (a *Addon) LuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		mod := L.SetFuncs(L.NewTable(), exports)
 		L.SetField(mod, "name", lua.LString(a.Name()))
+
+		setupCustomTypes(L)
 
 		L.Push(mod)
 		return 1
@@ -85,10 +86,9 @@ var exports = map[string]lua.LGFunction{
 		}
 		return 0
 	},
-	"Set": func(L *lua.LState) int {
-		return 1
-	},
-	"Get": func(L *lua.LState) int {
-		return 0
+	"Bucket": func(L *lua.LState) int {
+		name := L.CheckString(1)
+		s := NewBlobStorage(addon.db, "__buckets:"+name)
+		return newLuaRoute(s)(L)
 	},
 }

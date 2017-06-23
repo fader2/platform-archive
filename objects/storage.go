@@ -16,8 +16,8 @@ type EncodedObject interface {
 	ID() uuid.UUID
 	Type() ObjectType
 	SetType(ObjectType)
-	ContentType() string
-	SetContentType(string)
+	Meta() Meta
+	SetMeta(Meta)
 	Size() int64
 	SetSize(int64)
 	Reader() (io.ReadCloser, error)

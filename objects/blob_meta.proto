@@ -1,0 +1,13 @@
+syntax = "proto3";
+package objects;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = true;
+
+message Meta {
+    map<string, string> meta = 1;
+}
