@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/fader2/platform/config"
+	"github.com/fader2/platform/consts"
 	"github.com/fader2/platform/utils"
 
 	"log"
@@ -13,6 +14,8 @@ import (
 	"encoding/json"
 
 	"io"
+
+	"time"
 
 	"github.com/CloudyKit/jet"
 	"github.com/fader2/platform/addons"
@@ -240,6 +243,51 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		}
 		L.Push(lv)
 		return 1
+	},
+	"GetCookie": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		ck, err := ctx.r.Cookie(L.CheckString(2))
+		if err == http.ErrNoCookie {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		L.Push(lua.LString(ck.Value))
+		return 1
+	},
+	"DumpVars": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		log.Println("========================")
+		log.Println("DUMP VARS FROM CONTEXT")
+		for k, v := range ctx.Vars {
+			log.Printf("\t%q: \t\t%+v\n", k, v)
+		}
+		log.Println("========================")
+		return 0
+	},
+	"SetCookie": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		k := L.CheckString(2)
+		v := L.CheckString(3)
+
+		log.Println(
+			"get cfg float64",
+			config.AppConfig.CfgFloat("float1"),
+			config.AppConfig.CfgFloat("float2"),
+		)
+
+		delta, _ := time.ParseDuration(config.AppConfig.CfgString(consts.DEF_COOKIE_EXPIRES))
+		exp := time.Now().Add(delta)
+		http.SetCookie(ctx.w, &http.Cookie{
+			Name:     k,
+			Value:    v,
+			Path:     "/",
+			Domain:   config.AppConfig.CfgString(consts.DOMAIN),
+			Expires:  exp,
+			Secure:   config.AppConfig.CfgBool(consts.DEF_COOKIE_SECURE),
+			HttpOnly: true,
+		})
+		return 0
 	},
 	"Status": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)

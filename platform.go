@@ -40,7 +40,6 @@ var workspace = flag.String("workspace", "_workspace", "Path to work directory")
 var port = flag.Int("port", 8383, "Port listening for the frontend")
 
 var (
-	cfg    *config.Config
 	tpls   *jet.Set
 	routes *httprouter.Router
 	fs     billy.Filesystem
@@ -64,11 +63,11 @@ func main() {
 
 	fs = osfs.New(*workspace).Dir("")
 	loadSetting()
-	cfg.Workspace = *workspace
-	cfg.AppPath = appRootPath
-	cfg.AppLua = appLuaFile
-	cfg.Version = version
-	if err := BootstrapAddons(cfg); err != nil {
+	config.AppConfig.Workspace = *workspace
+	config.AppConfig.AppPath = appRootPath
+	config.AppConfig.AppLua = appLuaFile
+	config.AppConfig.Version = version
+	if err := BootstrapAddons(config.AppConfig); err != nil {
 		log.Fatal(err)
 	}
 
@@ -117,7 +116,7 @@ func loadSetting() {
 	log.Println("load settings")
 
 	routes = httprouter.New()
-	cfg = config.New()
+	config.AppConfig = config.New()
 
 	// load app.lua file
 	var err error
@@ -131,23 +130,23 @@ func loadSetting() {
 	// execute app.lua file
 	L := lua.NewState()
 	defer L.Close()
-	config.LuaSetCfg(L, cfg)
+	config.LuaSetCfg(L, config.AppConfig)
 	addons.PreloadLuaModules(L)
 	if err = L.DoString(_data.String()); err != nil {
 		log.Fatal("init settings (from lua):", err)
 		return
 	}
 
-	tpls.SetDevelopmentMode(cfg.Dev)
+	tpls.SetDevelopmentMode(config.AppConfig.Dev)
 
 	// setup routes from cfg
-	for _, route := range cfg.Routs {
+	for _, route := range config.AppConfig.Routs {
 		routes.Handle(
 			strings.ToUpper(route.Method),
 			route.Path,
 			core.EntrypointHandler(
 				assets,
-				cfg,
+				config.AppConfig,
 				route,
 				tpls,
 			),
@@ -198,7 +197,7 @@ func showCfg() {
 	log.Println("\tworkspace:", *workspace)
 	log.Println("")
 	log.Println("settings (DUMP):")
-	cfgJSON, _ := json.MarshalIndent(cfg, "", "    ")
+	cfgJSON, _ := json.MarshalIndent(config.AppConfig, "", "    ")
 	log.Println(string(cfgJSON))
 	log.Println("==================================")
 }

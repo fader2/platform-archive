@@ -5,6 +5,8 @@ import (
 	"log"
 	"sync/atomic"
 
+	"sync"
+
 	"github.com/CloudyKit/jet"
 	"github.com/fader2/platform/utils"
 	lua "github.com/yuin/gopher-lua"
@@ -12,6 +14,8 @@ import (
 
 var (
 	maintenance int32
+
+	AppConfig *Config
 )
 
 type Config struct {
@@ -22,7 +26,8 @@ type Config struct {
 	AppPath   string
 	Version   string
 
-	Vars jet.VarMap
+	Vars      jet.VarMap
+	VarsMutex sync.RWMutex
 
 	Routs         []Route
 	NotFoundPage  Route
@@ -112,6 +117,16 @@ var luaCfgReadOnlyMethods = map[string]lua.LGFunction{
 		cfg := LuaCheckCfg(L)
 		L.Push(lua.LString(cfg.Workspace))
 		return 1
+	},
+	"DumpVars": func(L *lua.LState) int {
+		cfg := LuaCheckCfg(L)
+		log.Println("========================")
+		log.Println("DUMP VARS FROM CONFIG")
+		for k, v := range cfg.Vars {
+			log.Printf("\t%q: \t\t%+v\n", k, v)
+		}
+		log.Println("========================")
+		return 0
 	},
 }
 
@@ -217,6 +232,9 @@ func luaCfg_RouteFromLuaFn(L *lua.LState) (route Route) {
 
 func luaCfg_GetVar(L *lua.LState) int {
 	cfg := LuaCheckCfg(L)
+	cfg.VarsMutex.RLock()
+	defer cfg.VarsMutex.RUnlock()
+
 	k := L.CheckString(2)
 	v := cfg.Vars[k]
 	lv := utils.ToLValueOrNil(v, L)
@@ -230,6 +248,9 @@ func luaCfg_GetVar(L *lua.LState) int {
 
 func luaCfg_SetVar(L *lua.LState) int {
 	cfg := LuaCheckCfg(L)
+	cfg.VarsMutex.Lock()
+	defer cfg.VarsMutex.Unlock()
+
 	k := L.CheckString(2)
 	lv := L.CheckAny(3)
 	v := utils.ToValueFromLValue(lv)

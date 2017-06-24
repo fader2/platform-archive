@@ -15,6 +15,8 @@ var (
 	TString  ContentType = "application/fader.dt.string"
 	TNumber  ContentType = "application/fader.dt.number"
 	TBool    ContentType = "application/fader.dt.bool"
+	TArray   ContentType = "application/fader.dt.array"
+	TMap     ContentType = "application/fader.dt.map"
 	TCustom  ContentType = "application/fader.dt.custom."
 )
 
@@ -26,6 +28,10 @@ func TypeFrom(v interface{}) (t ContentType) {
 		return TString
 	case bool:
 		return TBool
+	case []interface{}:
+		return TArray
+	case map[string]interface{}:
+		return TMap
 	}
 
 	return TUnknown

@@ -8,6 +8,13 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+// ToValueFromLValue преобразует lua.LValue в основной тип данных
+// Возвращаемые типы:
+// - LNumber -> float64
+// - LBool -> bool
+// - LString -> string
+// - LTable -> []interface{} or map[string]interface{}
+// - LNil -> nil
 func ToValueFromLValue(v lua.LValue) interface{} {
 	switch v.Type() {
 	case lua.LTNumber:
@@ -18,6 +25,8 @@ func ToValueFromLValue(v lua.LValue) interface{} {
 		return string(v.(lua.LString))
 	case lua.LTUserData:
 		return v.(*lua.LUserData).Value
+	case lua.LTNil:
+		return nil
 	case lua.LTTable:
 		tbl := v.(*lua.LTable)
 		var keys []string
