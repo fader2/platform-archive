@@ -38,6 +38,7 @@ const (
 
 var workspace = flag.String("workspace", "_workspace", "Path to work directory")
 var port = flag.Int("port", 8383, "Port listening for the frontend")
+var static = flag.String("static", "", "Path to static")
 
 var (
 	tpls   *jet.Set
@@ -138,6 +139,13 @@ func loadSetting() {
 	}
 
 	tpls.SetDevelopmentMode(config.AppConfig.Dev)
+
+	// static files if enabled
+	if len(*static) > 0 {
+		staticDir := http.Dir(filepath.Join(*workspace, *static))
+		log.Println(staticDir)
+		routes.ServeFiles("/static/*filepath", staticDir)
+	}
 
 	// setup routes from cfg
 	for _, route := range config.AppConfig.Routs {

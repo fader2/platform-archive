@@ -69,12 +69,19 @@ func EntrypointHandler(
 			- execute tpl
 		*/
 
+		var withoutView = len(route.Handler) == 0
+		var view *jet.Template
+
 		// Find tpl
-		view, err := tpls.GetTemplate(route.Handler)
-		if err != nil {
-			// not found template
-			DefNotFoundTplHandler(w, r, ps)
-			return
+		if !withoutView {
+			var errGetTpl error
+			view, errGetTpl = tpls.GetTemplate(route.Handler)
+			if errGetTpl != nil {
+				log.Println("find template", route.Handler, errGetTpl)
+				// not found template
+				DefNotFoundTplHandler(w, r, ps)
+				return
+			}
 		}
 
 		// setup ctx and lua engine
@@ -141,11 +148,18 @@ func EntrypointHandler(
 			return
 		}
 
+		if view == nil {
+			DefNotFoundTplHandler(w, r, ps)
+			return
+		}
+
 		if ctx.ResponseStatus == -1 {
 			ctx.ResponseStatus = http.StatusOK
 		}
 		w.WriteHeader(ctx.ResponseStatus)
-		view.Execute(w, vars, ctx)
+		if err := view.Execute(w, vars, ctx); err != nil {
+			log.Println("execute tpl:", err)
+		}
 	}
 }
 
@@ -349,7 +363,7 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		data, ok := ud.Value.([]byte)
 		if !ok {
 			L.RaiseError(
-				"not supported data type %T, got []byte",
+				"not supported data type %T, want []byte",
 				ud.Value,
 			)
 			return 0
