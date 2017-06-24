@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"encoding/gob"
+
 	"github.com/CloudyKit/jet"
 	"github.com/CloudyKit/jet/loaders/httpfs"
 	"github.com/boltdb/bolt"
@@ -23,6 +25,9 @@ var addon *Addon
 func init() {
 	addon = &Addon{}
 	addons.Register(addon)
+
+	gob.Register([]interface{}{})
+	gob.Register(map[string]interface{}{})
 }
 
 type Addon struct {

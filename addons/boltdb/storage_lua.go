@@ -1,6 +1,8 @@
 package boltdb
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"log"
 
@@ -104,7 +106,22 @@ func luaSetDataFromLValue(k string, in lua.LValue, b *objects.Blob) error {
 		} else {
 			b.Data = utils.Float64bytes(0)
 		}
+	case objects.TArray:
+		var buf = new(bytes.Buffer)
+		enc := gob.NewEncoder(buf)
+		if err := enc.Encode(v.([]interface{})); err != nil {
+			return errors.New("encode array: " + err.Error())
+		}
 
+		b.Data = buf.Bytes()
+	case objects.TMap:
+		var buf = new(bytes.Buffer)
+		enc := gob.NewEncoder(buf)
+		if err := enc.Encode(v.(map[string]interface{})); err != nil {
+			return errors.New("encode map: " + err.Error())
+		}
+
+		b.Data = buf.Bytes()
 	default:
 		return errors.New("not supported content type " + ct.String())
 	}
@@ -125,6 +142,26 @@ func luaPushValue(L *lua.LState, b *objects.Blob) int {
 	case objects.TBool:
 		v := utils.Float64frombytes(b.Data)
 		L.Push(lua.LBool(v == 1))
+		return 1
+	case objects.TArray:
+		var arr []interface{}
+		dec := gob.NewDecoder(bytes.NewBuffer(b.Data))
+		if err := dec.Decode(&arr); err != nil {
+			L.RaiseError("decode array %s", err)
+			return 0
+		}
+		lv := utils.ToLValueOrNil(arr, L)
+		L.Push(lv)
+		return 1
+	case objects.TMap:
+		var m map[string]interface{}
+		dec := gob.NewDecoder(bytes.NewBuffer(b.Data))
+		if err := dec.Decode(&m); err != nil {
+			L.RaiseError("decode array %s", err)
+			return 0
+		}
+		lv := utils.ToLValueOrNil(m, L)
+		L.Push(lv)
 		return 1
 	default:
 		L.RaiseError("not supported content type", ct)
