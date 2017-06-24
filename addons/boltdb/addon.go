@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	"encoding/gob"
@@ -15,23 +16,25 @@ import (
 	"github.com/fader2/platform/addons"
 	"github.com/fader2/platform/addons/boltdb/assets/templates"
 	"github.com/fader2/platform/config"
+	"github.com/fader2/platform/consts"
+	"github.com/fader2/platform/objects"
 	lua "github.com/yuin/gopher-lua"
 )
 
 const NAME = "boltdb"
 
-var addon *Addon
+var Instance *Addon
 
 func init() {
-	addon = &Addon{}
-	addons.Register(addon)
+	Instance = &Addon{}
+	addons.Register(Instance)
 
 	gob.Register([]interface{}{})
 	gob.Register(map[string]interface{}{})
 }
 
 type Addon struct {
-	db *bolt.DB
+	DB *bolt.DB
 }
 
 func (a *Addon) Name() string {
@@ -40,7 +43,7 @@ func (a *Addon) Name() string {
 
 func (a *Addon) Bootstrap(cfg *config.Config, tpls *jet.Set) (err error) {
 	dbpath := filepath.Join(cfg.Workspace, "_boltdb.db")
-	a.db, err = bolt.Open(
+	a.DB, err = bolt.Open(
 		dbpath,
 		0600,
 		&bolt.Options{
@@ -50,6 +53,26 @@ func (a *Addon) Bootstrap(cfg *config.Config, tpls *jet.Set) (err error) {
 	if err != nil {
 		return err
 	}
+
+	// templates
+	tpls.AddGlobalFunc("get", func(args jet.Arguments) reflect.Value {
+		args.RequireNumOfArguments("get", 1, 1)
+		if args.Get(0).Interface() == nil {
+			return reflect.ValueOf("")
+		}
+		slug, ok := args.Get(0).Interface().(string)
+		if !ok {
+			args.Panicf("not expected type %T", slug)
+			return reflect.ValueOf("")
+		}
+		s := NewBlobStorage(a.DB, consts.TPL_WIDGETS_BUCKET_NAME)
+		blob, err := objects.GetBlob(s, objects.UUIDFromString(slug))
+		if err != nil {
+			args.Panicf("find widget by name %q: %s", slug, err)
+			return reflect.ValueOf("")
+		}
+		return reflect.ValueOf(string(blob.Data))
+	})
 
 	return nil
 }
@@ -93,7 +116,13 @@ var exports = map[string]lua.LGFunction{
 	},
 	"Bucket": func(L *lua.LState) int {
 		name := L.CheckString(1)
-		s := NewBlobStorage(addon.db, "__buckets:"+name)
+		switch name {
+		case consts.TPL_WIDGETS_BUCKET_NAME:
+		// TODO: более лучший механихм работы с
+		default:
+			name = "__buckets:" + name
+		}
+		s := NewBlobStorage(Instance.DB, name)
 		return newLuaRoute(s)(L)
 	},
 }

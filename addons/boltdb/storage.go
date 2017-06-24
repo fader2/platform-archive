@@ -8,14 +8,17 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
+	"github.com/fader2/platform/consts"
 	"github.com/fader2/platform/objects"
 	uuid "github.com/satori/go.uuid"
 )
 
 var _ objects.Storer = (*BoltdbStorage)(nil)
 
-func NewBlobStorage(db *bolt.DB, name string) *BoltdbStorage {
-	return &BoltdbStorage{db, name}
+func NewBlobStorage(db *bolt.DB, name string) (s *BoltdbStorage) {
+	s = &BoltdbStorage{db, name}
+	s.initBucket()
+	return
 }
 
 type BoltdbStorage struct {
@@ -27,6 +30,13 @@ func (o *BoltdbStorage) NewEncodedObject(id uuid.UUID) objects.EncodedObject {
 	return objects.NewObject(id)
 }
 
+func (s *BoltdbStorage) initBucket() {
+	s.db.Update(func(tx *bolt.Tx) error {
+		tx.CreateBucketIfNotExists([]byte(s.bucket))
+		return nil
+	})
+}
+
 func (s *BoltdbStorage) EncodedObject(_type objects.ObjectType, id uuid.UUID) (objects.EncodedObject, error) {
 	var buf = new(bytes.Buffer)
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -36,6 +46,9 @@ func (s *BoltdbStorage) EncodedObject(_type objects.ObjectType, id uuid.UUID) (o
 	})
 	if err != nil {
 		return nil, err
+	}
+	if buf.Len() == 0 {
+		return nil, consts.ErrNotFound
 	}
 	or := objects.NewReader(buf)
 	defer or.Close()

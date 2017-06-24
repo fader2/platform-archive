@@ -85,11 +85,11 @@ import (
 
 const NAME = "$NAME"
 
-var addon *Addon
+var Instance *Addon
 
 func init() {
-	addon = &Addon{}
-	addons.Register(addon)
+	Instance = &Addon{}
+	addons.Register(Instance)
 }
 
 type Addon struct {
