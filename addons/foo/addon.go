@@ -8,11 +8,9 @@ import (
 	"github.com/CloudyKit/jet"
 	"github.com/CloudyKit/jet/loaders/httpfs"
 	"github.com/fader2/platform/addons"
-	"github.com/fader2/platform/config"
 	"github.com/fader2/platform/addons/foo/assets/templates"
+	"github.com/fader2/platform/config"
 	lua "github.com/yuin/gopher-lua"
-
-	
 )
 
 const NAME = "foo"
@@ -28,7 +26,7 @@ func (a *Addon) Name() string {
 	return NAME
 }
 
-func (a *Addon) Bootstrap(cfg *config.Config) error {
+func (a *Addon) Bootstrap(cfg *config.Config, tpls *jet.Set) error {
 	// TODO: bootstrap
 	return nil
 }
@@ -69,4 +67,3 @@ var exports = map[string]lua.LGFunction{
 		return 0
 	},
 }
-

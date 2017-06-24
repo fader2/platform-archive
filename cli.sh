@@ -99,7 +99,7 @@ func (a *Addon) Name() string {
 	return NAME
 }
 
-func (a *Addon) Bootstrap(cfg *config.Config) error {
+func (a *Addon) Bootstrap(cfg *config.Config, tpls *jet.Set) error {
 	// TODO: bootstrap
 	return nil
 }

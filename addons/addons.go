@@ -23,7 +23,7 @@ type Addon interface {
 	AssetsLoader() jet.Loader
 
 	// Bootstrap bootstrap addon
-	Bootstrap(cfg *config.Config) error
+	Bootstrap(cfg *config.Config, tpls *jet.Set) error
 }
 
 func Register(addon Addon) {
@@ -37,9 +37,9 @@ func PreloadLuaModules(L *lua.LState) {
 	}
 }
 
-func Bootstrap(cfg *config.Config) error {
+func Bootstrap(cfg *config.Config, tpls *jet.Set) error {
 	for _, addon := range Addons {
-		if err := addon.Bootstrap(cfg); err != nil {
+		if err := addon.Bootstrap(cfg, tpls); err != nil {
 			return fmt.Errorf("bootstrap %q, %s", addon.Name(), err)
 		}
 	}

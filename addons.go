@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/CloudyKit/jet"
 	"github.com/CloudyKit/jet/loaders/multi"
 	"github.com/fader2/platform/addons"
 	"github.com/fader2/platform/config"
@@ -14,6 +15,6 @@ var (
 	assets *multi.Multi
 )
 
-func BootstrapAddons(cfg *config.Config) error {
-	return addons.Bootstrap(cfg)
+func BootstrapAddons(cfg *config.Config, tpls *jet.Set) error {
+	return addons.Bootstrap(cfg, tpls)
 }

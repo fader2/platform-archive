@@ -38,7 +38,7 @@ func (a *Addon) Name() string {
 	return NAME
 }
 
-func (a *Addon) Bootstrap(cfg *config.Config) (err error) {
+func (a *Addon) Bootstrap(cfg *config.Config, tpls *jet.Set) (err error) {
 	dbpath := filepath.Join(cfg.Workspace, "_boltdb.db")
 	a.db, err = bolt.Open(
 		dbpath,

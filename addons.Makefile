@@ -1,6 +1,4 @@
 build_addons:
 	make -C addons/foo build
-	make -C addons/boltdb build
-#	make -C addons/bar build
-#	make -C addons/cache build
+	make -C addons/boltdb build 
 .PHONY: build_addons

@@ -20,3 +20,14 @@ addons/cache/
 │   └── templates
 └── views
 ```
+
+Add builder to `addons.Makefile`.
+
+``` diff
+build_addons:
+	make -C addons/foo build
+	make -C addons/boltdb build
++   # new addon
++   make -C addons/cache build // new addon
+.PHONY: build_addons
+```

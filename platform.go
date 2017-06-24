@@ -67,7 +67,7 @@ func main() {
 	config.AppConfig.AppPath = appRootPath
 	config.AppConfig.AppLua = appLuaFile
 	config.AppConfig.Version = version
-	if err := BootstrapAddons(config.AppConfig); err != nil {
+	if err := BootstrapAddons(config.AppConfig, tpls); err != nil {
 		log.Fatal(err)
 	}
 
