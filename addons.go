@@ -9,6 +9,7 @@ import (
 	// addons
 	_ "github.com/fader2/platform/addons/boltdb"
 	_ "github.com/fader2/platform/addons/foo"
+	_ "github.com/fader2/platform/addons/tpls"
 )
 
 var (

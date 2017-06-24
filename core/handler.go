@@ -258,6 +258,11 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		L.Push(lv)
 		return 1
 	},
+	"Path": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		L.Push(lua.LString(ctx.r.URL.Path))
+		return 1
+	},
 	"GetCookie": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		ck, err := ctx.r.Cookie(L.CheckString(2))
