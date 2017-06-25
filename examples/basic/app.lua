@@ -1,5 +1,6 @@
 local foo = require("foo")
 local boltdb = require("boltdb")
+local tpls = require("tpls")
 
 foo.Init() -- init external extensions
 
@@ -13,3 +14,5 @@ cfg():Set(DEF_COOKIE_EXPIRES, "8640h") -- 365 days
 
 boltdb.Init()
 boltdb.Opens({"sessions", "templates", "users"})
+
+tpls.Init()
