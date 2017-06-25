@@ -1,0 +1,8 @@
+{{extends "layout/basic.jet"}}
+
+{{block title()}}
+{{end}}
+
+{{block body()}}
+<h1>Index page</h1>
+{{end}}
