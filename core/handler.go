@@ -242,10 +242,6 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		k := L.CheckString(2)
 		lv := L.CheckAny(3)
 		v := utils.ToValueFromLValue(lv)
-		if v == nil {
-			log.Printf("ctx.Set(): not supported type, got %T, key %s", lv, k)
-			return 0
-		}
 		ctx.Vars.Set(k, v)
 		return 0
 	},
@@ -254,12 +250,24 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		k := L.CheckString(2)
 		v := ctx.Vars[k]
 		lv := utils.ToLValueOrNil(v, L)
-		if lv == nil {
-			log.Printf("ctx.Get(): not supported type, got %T, key %s", v, k)
-			return 0
-		}
 		L.Push(lv)
 		return 1
+	},
+	"QueryParam": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		key := L.CheckString(2)
+		L.Push(lua.LString(ctx.r.URL.Query().Get(key)))
+		return 1
+	},
+	"FormValue": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		key := L.CheckString(2)
+		L.Push(lua.LString(ctx.r.FormValue(key)))
+		return 1
+	},
+	"FormFile": func(L *lua.LState) int {
+		log.Println("FormFile not implemented")
+		return 0
 	},
 	"Path": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
@@ -384,5 +392,21 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		)
 
 		return 0
+	},
+
+	"IsPost": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		L.Push(lua.LBool(ctx.r.Method == http.MethodPost))
+		return 1
+	},
+	"IsGet": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		L.Push(lua.LBool(ctx.r.Method == http.MethodGet))
+		return 1
+	},
+	"IsDelete": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		L.Push(lua.LBool(ctx.r.Method == http.MethodDelete))
+		return 1
 	},
 }

@@ -68,13 +68,8 @@ var luaBoltdbMethods = map[string]lua.LGFunction{
 
 		b, err := objects.GetBlob(ls.s, id)
 		if err != nil {
-			L.RaiseError(
-				"error get blob object by name %q, id=%q: %s",
-				name,
-				id.String(),
-				err,
-			)
-			return 0
+			L.Push(lua.LNil)
+			return 1
 		}
 
 		return b.PushDataToLState(L)

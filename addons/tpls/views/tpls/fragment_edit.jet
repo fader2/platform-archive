@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="shortcut icon" href="/static/img/favicon.ico" type="image/x-icon" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/2.27.4/css/uikit.almost-flat.min.css" />
+</head>
+<body>
+
+<div class="uk-width-1-2 uk-container uk-container-center">
+    <form class="uk-form" method="POST">
+        <fieldset>
+            <legend>
+            {{fragmentID}}
+            {{ if NotExists }}
+            <small>not exists</small>
+            {{ end }}
+            </legend>
+            <input id="fragmentID" name="fragmentID" value="{{fragmentID}}" type="hidden" />
+            <input id="framgnetID-{{fragmentID}}-raw" name="data" value="{{isset(Data) ? Data : "" }}" type="hidden" />
+            <div id="framgnetID-{{fragmentID}}-view" class="uk-width-1-1 uk-scrollable-box"></div>
+            <button class="uk-button">Save</button>
+        </fieldset>
+    </form>
+</div>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.3/ace.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.3/mode-html.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/ace/1.2.3/mode-django.js"></script>
+<script>
+var rawID = "framgnetID-{{fragmentID}}-raw";
+var editor = ace.edit("framgnetID-{{fragmentID}}-view");
+editor.setFontSize("11pt");
+editor.getSession().setMode("ace/mode/django");
+editor.setValue(document.getElementById(rawID).value);
+editor.getSession().on('change', function() {
+    document.getElementById(rawID).value = editor.getSession().getValue();
+});
+
+textEditor.$blockScrolling = Infinity;
+</script>
+
+</body>
+</html>
