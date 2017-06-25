@@ -58,7 +58,7 @@ func (a *Addon) Bootstrap(cfg *config.Config, tpls *jet.Set) error {
 	})
 	tpls.AddGlobalFunc("UUIDFrom", func(a jet.Arguments) reflect.Value {
 		a.RequireNumOfArguments("UUIDFrom", 1, 1)
-		return reflect.ValueOf(objects.UUIDFromString(a.Get(0).String()))
+		return reflect.ValueOf(objects.UUIDFromString(a.Get(0).String()).String())
 	})
 	return nil
 }
@@ -80,7 +80,7 @@ func (a *Addon) AssetsLoader() jet.Loader {
 var exports = map[string]lua.LGFunction{
 	"Init": func(L *lua.LState) int {
 		f, err := templates.Assets.Open(
-			"addons." + NAME + "___bootstrap.lua",
+			NAME + "/bootstrap.lua",
 		)
 		if os.IsNotExist(err) {
 			return 0

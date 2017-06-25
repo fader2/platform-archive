@@ -22,6 +22,7 @@ import (
 	"github.com/CloudyKit/jet/loaders/multi"
 	"github.com/fader2/platform/addons"
 	"github.com/fader2/platform/config"
+	"github.com/fader2/platform/consts"
 	"github.com/fader2/platform/core"
 	"github.com/julienschmidt/httprouter"
 	lua "github.com/yuin/gopher-lua"
@@ -64,10 +65,9 @@ func main() {
 
 	fs = osfs.New(*workspace).Dir("")
 	loadSetting()
-	config.AppConfig.Workspace = *workspace
 	config.AppConfig.AppPath = appRootPath
 	config.AppConfig.AppLua = appLuaFile
-	config.AppConfig.Version = version
+
 	if err := BootstrapAddons(config.AppConfig, tpls); err != nil {
 		log.Fatal(err)
 	}
@@ -118,6 +118,8 @@ func loadSetting() {
 
 	routes = httprouter.New()
 	config.AppConfig = config.New()
+	config.AppConfig.Workspace = *workspace
+	config.AppConfig.Version = version
 
 	// load app.lua file
 	var err error
@@ -132,6 +134,7 @@ func loadSetting() {
 	L := lua.NewState()
 	defer L.Close()
 	config.LuaSetCfg(L, config.AppConfig)
+	consts.SetupToLua(L)
 	addons.PreloadLuaModules(L)
 	if err = L.DoString(_data.String()); err != nil {
 		log.Fatal("init settings (from lua):", err)

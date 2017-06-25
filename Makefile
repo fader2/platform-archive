@@ -2,7 +2,10 @@ include utils.Makefile
 include addons.Makefile
 
 run:
-	go run platform.go addons.go
+	go run \
+		-tags=deploy_build \
+		-race \
+		platform.go addons.go
 .PHONY: run
 
 build: build_addons

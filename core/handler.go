@@ -88,6 +88,7 @@ func EntrypointHandler(
 		L := lua.NewState()
 		defer L.Close()
 
+		consts.SetupToLua(L)
 		addons.PreloadLuaModules(L)
 
 		vars := make(jet.VarMap)
@@ -160,6 +161,8 @@ func EntrypointHandler(
 		if err := view.Execute(w, vars, ctx); err != nil {
 			log.Println("execute tpl:", err)
 		}
+
+		return
 	}
 }
 

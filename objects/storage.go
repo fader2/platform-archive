@@ -10,6 +10,8 @@ type Storer interface {
 	NewEncodedObject(uuid.UUID) EncodedObject
 	EncodedObject(ObjectType, uuid.UUID) (EncodedObject, error)
 	SetEncodedObject(obj EncodedObject) (uuid.UUID, error)
+
+	//TODO: удалить объект
 }
 
 type EncodedObject interface {

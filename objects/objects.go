@@ -8,21 +8,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-type ObjectType string
-
-const (
-	InvalidObject ObjectType = ""
-	BlobObject    ObjectType = "blob"
-)
-
-func (t ObjectType) String() string {
-	return string(t)
-}
-
-func (t ObjectType) Bytes() []byte {
-	return []byte(t.String())
-}
-
 var _ EncodedObject = (*Object)(nil)
 
 func NewObject(id uuid.UUID) *Object {

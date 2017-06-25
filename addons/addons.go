@@ -39,6 +39,7 @@ func PreloadLuaModules(L *lua.LState) {
 
 func Bootstrap(cfg *config.Config, tpls *jet.Set) error {
 	for _, addon := range Addons {
+		log.Println("bootstrap addon", addon.Name())
 		if err := addon.Bootstrap(cfg, tpls); err != nil {
 			return fmt.Errorf("bootstrap %q, %s", addon.Name(), err)
 		}

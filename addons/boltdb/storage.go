@@ -17,7 +17,6 @@ var _ objects.Storer = (*BoltdbStorage)(nil)
 
 func NewBlobStorage(db *bolt.DB, name string) (s *BoltdbStorage) {
 	s = &BoltdbStorage{db, name}
-	s.initBucket()
 	return
 }
 
@@ -28,13 +27,6 @@ type BoltdbStorage struct {
 
 func (o *BoltdbStorage) NewEncodedObject(id uuid.UUID) objects.EncodedObject {
 	return objects.NewObject(id)
-}
-
-func (s *BoltdbStorage) initBucket() {
-	s.db.Update(func(tx *bolt.Tx) error {
-		tx.CreateBucketIfNotExists([]byte(s.bucket))
-		return nil
-	})
 }
 
 func (s *BoltdbStorage) EncodedObject(_type objects.ObjectType, id uuid.UUID) (objects.EncodedObject, error) {

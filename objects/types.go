@@ -1,12 +1,27 @@
 package objects
 
-import (
-	"strings"
-)
+import "strings"
 
 const (
 	PREFIX_FADERDATATYPE = "application/fader.datatypes."
+
+	InvalidObject ObjectType = ""
+	BlobObject    ObjectType = "blob"
 )
+
+// Object type
+
+type ObjectType string
+
+func (t ObjectType) String() string {
+	return string(t)
+}
+
+func (t ObjectType) Bytes() []byte {
+	return []byte(t.String())
+}
+
+// Content type
 
 type ContentType string
 
@@ -37,8 +52,6 @@ func TypeFrom(v interface{}) (t ContentType) {
 	return TUnknown
 }
 
-//
-
 func (t ContentType) String() string {
 	return string(t)
 }
@@ -47,33 +60,6 @@ func (t ContentType) Valid() bool {
 	return strings.HasPrefix(t.String(), PREFIX_FADERDATATYPE)
 }
 
-func (t ContentType) IsString() bool {
-	if t.Valid() {
-		return false
-	}
-	return strings.HasSuffix(t.String(), "string")
-}
-
-func (t ContentType) IsNumber() bool {
-	if t.Valid() {
-		return false
-	}
-	return strings.HasSuffix(t.String(), "number")
-}
-
-func (t ContentType) IsBool() bool {
-	if t.Valid() {
-		return false
-	}
-	return strings.HasSuffix(t.String(), "bool")
-}
-
-func (t ContentType) IsCustom() bool {
-	if t.Valid() {
-		return false
-	}
-	if len(t.String()) <= len(PREFIX_FADERDATATYPE+".custom.") {
-		return false
-	}
-	return strings.HasPrefix(t.String(), PREFIX_FADERDATATYPE+".custom.")
+func (t ContentType) Equal(v ContentType) bool {
+	return t == v
 }
