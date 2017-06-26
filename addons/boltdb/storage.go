@@ -83,11 +83,7 @@ func (s *BoltdbStorage) SetEncodedObject(obj objects.EncodedObject) (
 	io.Copy(ow, r)
 
 	err = s.db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(s.bucket))
-		if err != nil {
-			return err
-		}
-		return b.Put(id.Bytes(), buf.Bytes())
+		return tx.Bucket([]byte(s.bucket)).Put(id.Bytes(), buf.Bytes())
 	})
 
 	return

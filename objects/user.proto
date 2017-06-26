@@ -1,0 +1,24 @@
+syntax = "proto3";
+package objects;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = true;
+
+message UserPasport {
+    string email = 1;
+}
+
+message UserProfile {
+    string first_name = 1;
+    string second_name = 2;
+    string pic_url = 3;
+}
+
+message UserInfo {
+    UserPasport pasport = 1;
+    UserProfile profile = 2;
+}

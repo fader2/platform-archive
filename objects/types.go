@@ -7,6 +7,7 @@ const (
 
 	InvalidObject ObjectType = ""
 	BlobObject    ObjectType = "blob"
+	UserObject    ObjectType = "user"
 )
 
 // Object type

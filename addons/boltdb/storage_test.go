@@ -45,10 +45,9 @@ func TestGetSetAnyObject(t *testing.T) {
 
 func TestBlob(t *testing.T) {
 
-	blob := &objects.Blob{
-		ID:          uuid.NewV4(),
-		ContentType: "text/plain",
-	}
+	blob := objects.EmptyBlob()
+	blob.ID = uuid.NewV4()
+	blob.Meta.Set(objects.META_CONTENT_TYPE, "text/plain")
 	blob.Data = []byte("Abc")
 
 	s := NewBlobStorage(db, "_______fortesting")
@@ -65,7 +64,7 @@ func TestBlob(t *testing.T) {
 	if err != nil {
 		t.Fatal("find blob by id", err)
 	}
-	if blob.ContentType != "text/plain" {
+	if blob.Meta.Get(objects.META_CONTENT_TYPE) != "text/plain" {
 		t.Fatal("not expected content type")
 	}
 	if len(blob.Data) == 0 {
@@ -76,5 +75,41 @@ func TestBlob(t *testing.T) {
 		wantData,
 	) {
 		t.Fatal("not expected data")
+	}
+}
+
+func TestUser(t *testing.T) {
+	s := NewBlobStorage(db, "_______fortesting")
+
+	u := objects.EmptyUser(objects.Client)
+	u.ID = uuid.NewV4()
+	u.Info.Pasport.Email = "client@test.com"
+	u.Info.Profile.FirstName = "fname"
+
+	id, err := objects.SetUser(s, u)
+	if err != nil {
+		t.Error("set user", err)
+	}
+	if id == uuid.Nil {
+		t.Error("empty user ID")
+	}
+
+	//
+
+	got, err := objects.GetUser(s, id)
+	if err != nil {
+		t.Error("find user", err)
+	}
+
+	if !objects.Client.Equal(objects.UserType(got.Meta.Get(objects.META_USER_TYPE))) {
+		t.Error("not expected user type", got.Meta)
+	}
+
+	if got.Info.Pasport.Email != u.Info.Pasport.Email {
+		t.Error("not expected email")
+	}
+
+	if got.Info.Profile.FirstName != u.Info.Profile.FirstName {
+		t.Error("not expected first name")
 	}
 }

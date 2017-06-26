@@ -6,9 +6,13 @@ Package objects is a generated protocol buffer package.
 
 It is generated from these files:
 	blob_meta.proto
+	user.proto
 
 It has these top-level messages:
 	Meta
+	UserPasport
+	UserProfile
+	UserInfo
 */
 package objects
 
