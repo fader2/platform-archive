@@ -2,7 +2,7 @@
 
 [![Status](https://img.shields.io/badge/status-dev-blue.svg)]()
 [![License](http://img.shields.io/badge/license-mit-blue.svg)](https://raw.githubusercontent.com/fasder2/platform/master/LICENSE)
-[![Build Status](https://travis-ci.org/inpime/fader.svg?branch=master)](https://travis-ci.org/inpime/fader)
+[![Build Status](https://travis-ci.org/fader2/platform.svg?branch=master)](https://travis-ci.org/fader2/platform)
 
 Fader is a abstract tool for creation of web applications. Gives maximum flexibility arranging information on the site.
 
