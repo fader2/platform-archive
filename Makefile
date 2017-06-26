@@ -8,8 +8,11 @@ run:
 		platform.go addons.go
 .PHONY: run
 
-build: build_addons
+prebuild: build_addons
 	go generate
+.PHONY: prebuild
+
+build:
 	go build -tags=deploy_build -o bin/platform platform.go addons.go
 .PHONY: build
 
@@ -17,3 +20,10 @@ genproto:
 	cd ./objects && protoc -I=. -I=${GOPATH}/src --gogoslick_out=. *.proto
 	cd ./objects && protoc -I=. -I=${GOPATH}/src --gogoslick_out=. *.proto
 .PHONY: genproto
+
+test:
+	go test -v \
+		 ./objects
+	go test -v \
+		 ./addons/boltdb
+.PHONY: test
