@@ -29,6 +29,5 @@ _testmain.go
 *.lock
 .env
 _*
-*_vfsdata.go
 
 coverage.out
