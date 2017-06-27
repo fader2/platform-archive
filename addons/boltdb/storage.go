@@ -32,12 +32,12 @@ func (o *BoltdbStorage) NewEncodedObject(id uuid.UUID) objects.EncodedObject {
 func (s *BoltdbStorage) EncodedObject(_type objects.ObjectType, id uuid.UUID) (objects.EncodedObject, error) {
 	var buf = new(bytes.Buffer)
 	err := s.db.View(func(tx *bolt.Tx) (err error) {
-	again:
 		b := tx.Bucket([]byte(s.bucket))
 		if b == nil {
-			done := s.createBucket([]byte(s.bucket))
-			<-done
-			goto again
+			b, err = tx.CreateBucketIfNotExists([]byte(s.bucket))
+			if err != nil {
+				return err
+			}
 		}
 		_, err = buf.Write(b.Get(id.Bytes()))
 		return
@@ -88,26 +88,16 @@ func (s *BoltdbStorage) SetEncodedObject(obj objects.EncodedObject) (
 	r, _ := obj.Reader()
 	io.Copy(ow, r)
 
-	err = s.db.Update(func(tx *bolt.Tx) error {
-	again:
+	err = s.db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(s.bucket))
 		if b == nil {
-			done := s.createBucket([]byte(s.bucket))
-			<-done
-			goto again
+			b, err = tx.CreateBucketIfNotExists([]byte(s.bucket))
+			if err != nil {
+				return err
+			}
 		}
 		return b.Put(id.Bytes(), buf.Bytes())
 	})
 
 	return
-}
-
-func (s *BoltdbStorage) createBucket(name []byte) (done chan struct{}) {
-	done = make(chan struct{}, 1)
-	go s.db.Update(func(tx *bolt.Tx) (err error) {
-		_, err = tx.CreateBucketIfNotExists(name)
-		done <- struct{}{}
-		return
-	})
-	return done
 }

@@ -25,5 +25,6 @@ test:
 	go test -v \
 		 ./objects
 	go test -v \
+		-timeout 1s \
 		 ./addons/boltdb
 .PHONY: test
