@@ -1,13 +1,15 @@
-sudo: required
-dist: trusty
-
 language: go
 go:
-    - 1.7
-    - 1.8
-
-before_install: 
-  - echo "before install"
-
+- 1.8
+before_install:
+- echo "before install"
 script:
-  - make test
+- make test
+- make build
+deploy:
+  provider: releases
+  api_key:
+    secure: K6VxDQyKQHUFoxs6V0u6TAptzjdXxhNmpNoGMzOJj2D/6TbTmdujT7sk3RD34zddXkbbBm4V8yFTIlwrcfkJOZ0bAQQIJho/qDr/nAW2l2k/7fZHAoswK7PnkM2IdwJfIBFGCs2gQkzGg0G+qLyYei1k9kX5Ugsergch4iOFYTgqZBU97lYi6CZuG4kZLXRBVEyaF/z/D4M0Dv2G+fXNpaTCDmaIwEB2WHP6l9rsr7+W5So34EzYj34C9lhFYnj6pegrHd1g0tB/p9pIZ0KMrzoHxI8Ng6Ah1TB0D9ur0sx0OfACoVDx30fqd0qBexjvXX+Btl8tvQ8VLEow4LHMRh08HzGVrC1oY5z1FzX0lNKoc3otAUPqxkGC252taEgj4w518MOoNqv/1L86z2APmSIWx/URqdUxvKDRgNk4j0eFWrI4Va9BkB1wKHTcZCVoUAuQ+EdDz2Uye7399KIclfflRrvL5RscSoWENiDzP3l4/dW2ojhMLK/aaWsYgS7SCoKxGoc9ljG14ISfWaGSUu34bt6+lNeFZhbRy/rRiuqRkJCijG2fEwex2cYenX7V/kv8jlMIM1twAn1XBrp8h1aiCfOnZrIkocOgm6ThtMfk3DFTIo5t9w9KMxqpEL7/Pf9KyATGZxUhkzyymRp+0LkP7n/gye3+oY54K9769eM=
+  file: bin/*
+  on:
+    repo: fader2/platform
