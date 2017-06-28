@@ -12,6 +12,10 @@ Fader is a abstract tool for creation of web applications. Gives maximum flexibi
 
 ## Quick start
 ```shell
+# gen keys
+openssl genrsa -out _key.pem 2048
+openssl rsa -in _key.pem -pubout -out _key.pem.pub
+
 # create workspace
 mkdir -p _workspace
 

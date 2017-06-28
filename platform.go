@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -17,6 +18,12 @@ import (
 	"log"
 
 	"encoding/json"
+	"encoding/pem"
+
+	"crypto/rsa"
+	"crypto/x509"
+
+	"io/ioutil"
 
 	"github.com/CloudyKit/jet"
 	"github.com/CloudyKit/jet/loaders/multi"
@@ -40,6 +47,8 @@ const (
 var workspace = flag.String("workspace", "_workspace", "Path to work directory")
 var port = flag.Int("port", 8383, "Port listening for the frontend")
 var static = flag.String("static", "", "Path to static")
+var publicKeyPath = flag.String("public_key", "_key.pem.pub", "Path to public key")
+var privateKeyPath = flag.String("private_key", "_key.pem", "Path to private key")
 
 var (
 	tpls   *jet.Set
@@ -135,6 +144,19 @@ func loadSetting() {
 	defer L.Close()
 	config.LuaSetCfg(L, config.AppConfig)
 	consts.SetupToLua(L)
+	consts.SetupDefValues(config.AppConfig)
+
+	config.AppConfig.PrivateKey, err = privateKey(*privateKeyPath)
+	if err != nil {
+		log.Fatal("open private key:", err)
+		return
+	}
+	config.AppConfig.PublicKey, err = publicKey(*publicKeyPath)
+	if err != nil {
+		log.Fatal("open public key:", err)
+		return
+	}
+
 	addons.PreloadLuaModules(L)
 	if err = L.DoString(_data.String()); err != nil {
 		log.Fatal("init settings (from lua):", err)
@@ -207,8 +229,76 @@ func showCfg() {
 	log.Println("\tfrontend port:", *port)
 	log.Println("\tworkspace:", *workspace)
 	log.Println("")
-	log.Println("settings (DUMP):")
-	cfgJSON, _ := json.MarshalIndent(config.AppConfig, "", "    ")
+	log.Println("config app (DUMP):")
+	dumpCfg := map[string]interface{}{
+		"version":   config.AppConfig.Version,
+		"vars":      config.AppConfig.Vars,
+		"dev":       config.AppConfig.Dev,
+		"workspace": config.AppConfig.Workspace,
+		"routs":     config.AppConfig.Routs,
+		"routs_len": len(config.AppConfig.Routs),
+	}
+	cfgJSON, _ := json.MarshalIndent(dumpCfg, "", "    ")
 	log.Println(string(cfgJSON))
 	log.Println("==================================")
+}
+
+// helpers
+
+func privateKey(path string) (*rsa.PrivateKey, error) {
+	of, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	data, err := ioutil.ReadAll(of)
+	if err != nil {
+		return nil, err
+	}
+	of.Close()
+
+	// main
+
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return nil, errors.New("failed to parse PEM block containing the key")
+	}
+
+	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return priv, nil
+}
+
+func publicKey(path string) (*rsa.PublicKey, error) {
+	of, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	data, err := ioutil.ReadAll(of)
+	if err != nil {
+		return nil, err
+	}
+	of.Close()
+
+	// main
+
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return nil, errors.New("failed to parse PEM block containing the key")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	switch pub := pub.(type) {
+	case *rsa.PublicKey:
+		return pub, nil
+	default:
+		break // fall through
+	}
+	return nil, errors.New("Key type is not RSA")
 }

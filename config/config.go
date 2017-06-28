@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/rsa"
 	"fmt"
 	"log"
 	"sync/atomic"
@@ -25,6 +26,9 @@ type Config struct {
 	AppLua    string
 	AppPath   string
 	Version   string
+
+	PublicKey  *rsa.PublicKey
+	PrivateKey *rsa.PrivateKey
 
 	Vars      jet.VarMap
 	VarsMutex sync.RWMutex

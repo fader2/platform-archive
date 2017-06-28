@@ -4,8 +4,11 @@ include addons.Makefile
 run:
 	go run \
 		-tags=deploy_build \
-		-race \
-		platform.go addons.go
+		platform.go addons.go \
+		--workspace examples/basic \
+		--static static \
+		--public_key examples/basic/_key.pem.pub \
+		--private_key examples/basic/_key.pem
 .PHONY: run
 
 prebuild: build_addons

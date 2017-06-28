@@ -9,7 +9,7 @@ import (
 var luaBoltdbTypeName = "storage_boltdb"
 
 type luaBoltdb struct {
-	s *BoltdbStorage
+	*BoltdbStorage
 }
 
 func setupCustomTypes(L *lua.LState) {
@@ -22,7 +22,7 @@ func newUserData(s *BoltdbStorage) func(L *lua.LState) int {
 	return func(L *lua.LState) int {
 		ud := L.NewUserData()
 		ud.Value = &luaBoltdb{
-			s: s,
+			s,
 		}
 		L.SetMetatable(ud, L.GetTypeMetatable(luaBoltdbTypeName))
 		L.Push(ud)
@@ -41,7 +41,7 @@ func checkLuaBoltdb(L *lua.LState) *luaBoltdb {
 
 var luaBoltdbMethods = map[string]lua.LGFunction{
 	"Set": func(L *lua.LState) int {
-		ls := checkLuaBoltdb(L)
+		store := checkLuaBoltdb(L)
 
 		name := L.CheckString(2)
 		lv := L.CheckAny(3)
@@ -52,7 +52,7 @@ var luaBoltdbMethods = map[string]lua.LGFunction{
 		b.SetDataFromValue(v)
 		b.SetOrigName(name)
 
-		id, err := objects.SetBlob(ls.s, b)
+		id, err := objects.SetBlob(store, b)
 		if err != nil {
 			L.RaiseError("error save object", err)
 			return 0
@@ -62,11 +62,11 @@ var luaBoltdbMethods = map[string]lua.LGFunction{
 		return 1
 	},
 	"Get": func(L *lua.LState) int {
-		ls := checkLuaBoltdb(L)
+		store := checkLuaBoltdb(L)
 		name := L.CheckString(2)
 		id := objects.UUIDFromString(name)
 
-		b, err := objects.GetBlob(ls.s, id)
+		b, err := objects.GetBlob(store, id)
 		if err != nil {
 			L.Push(lua.LNil)
 			return 1

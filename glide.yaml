@@ -1,5 +1,4 @@
 package: .
-
 ignore:
 - addons
 - config
@@ -7,27 +6,22 @@ ignore:
 - core
 - objects
 - utils
-
 import:
-# core
-- package: github.com/CloudyKit/jet/...
+- package: github.com/CloudyKit/jet
+  subpackages:
+  - '...'
 - package: github.com/yuin/gopher-lua
 - package: github.com/satori/go.uuid
 - package: github.com/julienschmidt/httprouter
-
-# protobuf
-- package: github.com/gogo/protobuf/...
-
-# addons
+- package: github.com/gogo/protobuf
+  subpackages:
+  - '...'
 - package: github.com/shurcooL/vfsgen
-
-# addons boltdb
 - package: github.com/boltdb/bolt
-
-# addon tpls
 - package: github.com/microcosm-cc/bluemonday
 - package: github.com/russross/blackfriday
-
+- package: github.com/dgrijalva/jwt-go
+  version: v3.0.0
 testImport:
 - package: gopkg.in/check.v1
 - package: github.com/stretchr/testify

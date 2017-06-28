@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	InvalidUserType UserType = ""
+	UnknownUserType UserType = ""
 	Application     UserType = "app"
 	Client          UserType = "client"
 )
@@ -64,7 +64,7 @@ func SetUser(s Storer, b *User) (uuid.UUID, error) {
 }
 
 func DecodeUser(o EncodedObject) (*User, error) {
-	obj := EmptyUser(InvalidUserType)
+	obj := EmptyUser(UnknownUserType)
 
 	return obj, obj.Decode(o)
 }
