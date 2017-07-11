@@ -30,6 +30,7 @@ var (
 
 func EmptyUser(_type UserType) (u *User) {
 	return &User{
+		ID: uuid.Nil,
 		Meta: Meta{Meta: map[string]string{
 			META_USER_TYPE: _type.String(),
 		}},

@@ -54,3 +54,12 @@ func TestUser(t *testing.T) {
 		t.Error("not expected access[0]")
 	}
 }
+
+func TestHashPWD(t *testing.T) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("1"), bcrypt.DefaultCost)
+	assert.NoError(t, err)
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte("1"))
+	assert.NoError(t, err)
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte("2"))
+	assert.Error(t, err)
+}

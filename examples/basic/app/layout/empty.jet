@@ -1,0 +1,20 @@
+{{import "_helper" }}
+<html>
+<head>
+    <title>{{yield title()}}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/uikit/2.26.2/css/uikit.almost-flat.min.css">
+
+    {{yield inlineFragment(section="head", wrap=false)}}
+</head>
+<body class="uk-height-1-1">
+    {{yield inlineFragment(section="afterNavBarLine", wrap=false)}}
+    <!--
+    <div class="uk-width-medium-1-2 uk-container uk-container-center uk-text-center uk-margin">Example - basic</div>
+    -->
+    {{yield body()}}
+</body>
+</html>

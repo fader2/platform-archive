@@ -58,6 +58,8 @@ func ToValueFromLValue(v lua.LValue) interface{} {
 		}
 
 		return _vals
+	default:
+		log.Println("not supported type", v.Type())
 	}
 
 	return nil

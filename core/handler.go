@@ -92,9 +92,11 @@ func EntrypointHandler(
 			r,
 			vars,
 		)
-		luaAddCustomTypeContextAndHelpers(L, ctx)
-		luaAddCustomTypeUser(L)
-		config.LuaSetReadOnlyCfg(L, cfg)
+		luaGlobalHelpFuncs(L)
+		registerContextType(L, ctx)
+		registerUserType(L)
+		registerAccessTokenType(L)
+		config.RegisterReadOnlyConfigType(L, cfg)
 
 		// set request options
 		for _, param := range ps {

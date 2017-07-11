@@ -26,6 +26,7 @@ genproto:
 
 test:
 	go test -v \
+		-run TestPWD \
 		 ./objects
 	go test -v \
 		-timeout 1s \

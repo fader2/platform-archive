@@ -1,0 +1,32 @@
+{{extends "layout/empty.jet"}}
+
+
+{{block title()}}
+Signin
+{{end}}
+
+{{block body()}}
+<div class="uk-vertical-align uk-text-center uk-height-1-1">
+            
+    <div class="uk-vertical-align-middle" style="width: 250px; top: -50px;">
+
+        <form class="uk-form" method="POST">
+            <input type="hidden" value="" name="">
+            
+            <div class="uk-form-row">
+                <input name="email" class="uk-width-1-1 uk-form-large" type="text" autocomplete="off" autofocus="autofocus" placeholder="Username">
+            </div>
+            <div class="uk-form-row">
+                <input name="password" class="uk-width-1-1 uk-form-large" type="password" autocomplete="off" placeholder="Password">
+            </div>
+            <div class="uk-form-row">
+                <button class="uk-width-1-1 uk-button uk-button-primary uk-button-large">Login</button>
+            </div>
+            
+        </form>
+        
+        
+
+    </div>
+</div>
+{{end}}

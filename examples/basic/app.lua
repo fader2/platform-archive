@@ -2,15 +2,17 @@ local foo = require("foo")
 local boltdb = require("boltdb")
 local tpls = require("tpls")
 
-foo.Init() -- init external extensions
+-- foo.init() -- init external extensions
 
+print(cfg:get("foo"))
 -- cfg():Dev(true)
-cfg():AddRoute("GET", "/", "pages/index.jet", {"_all.lua"})
+cfg:addRoute("GET", "/", "pages/index.jet", {"_all.lua", "pages/index.lua"})
+cfg:addRoute("GET", "/signin", "pages/login.jet", {"_all.lua"})
 
 -- settings cookies
-cfg():Set(COOKIE_SECURE, false)
+cfg:set(COOKIE_SECURE, false)
 
-boltdb.Init()
-boltdb.Opens({"sessions", "templates", "users"})
+boltdb.init()
+boltdb.opens({"sessions", "templates", "users"})
 
-tpls.Init()
+tpls.init()

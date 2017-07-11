@@ -10,6 +10,8 @@
 </head>
 <body>
 
+{{ raw := (isset(Data) ? Data: "")}}
+
 <div class="uk-width-1-2 uk-container uk-container-center">
     <form class="uk-form" method="POST">
         <fieldset>
@@ -20,7 +22,7 @@
             {{ end }}
             </legend>
             <input id="fragmentID" name="fragmentID" value="{{fragmentID}}" type="hidden" />
-            <input id="framgnetID-{{fragmentID}}-raw" name="data" value="{{isset(Data) ? Data : "" }}" type="hidden" />
+            <input id="framgnetID-{{fragmentID}}-raw" name="data" value="{{raw|safeHtml}}" type="hidden" />
             <div id="framgnetID-{{fragmentID}}-view" class="uk-width-1-1 uk-scrollable-box"></div>
             <button class="uk-button">Save</button>
         </fieldset>
@@ -40,7 +42,7 @@ editor.getSession().on('change', function() {
     document.getElementById(rawID).value = editor.getSession().getValue();
 });
 
-textEditor.$blockScrolling = Infinity;
+editor.$blockScrolling = Infinity;
 </script>
 
 </body>

@@ -5,56 +5,21 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <link rel="shortcut icon" href="/static/img/favicon.ico" type="image/x-icon" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/2.27.4/css/uikit.almost-flat.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/uikit/2.27.4/css/uikit.almost-flat.min.css" />
 
     <title>{{yield title()}}</title>
     {{yield inlineFragment(section="head", wrap=false)}}
 </head>
 <body>
-    <nav class="uk-navbar">
-        <a class="uk-navbar-brand" href="/">Index</a>
-        <ul class="uk-navbar-nav">
-            <li class=""><a href="/item1">Item1</a></li>
-            {{yield inlineFragment(section="navbar_menu_items")}}
-        </ul>
-        
-        <div class="uk-navbar-content uk-navbar-flip">
-            <div class="uk-navbar-content uk-text-muted"></div>
-            <ul class="uk-navbar-nav">
-                <li class="uk-navbar-content">
-                    <form class="uk-form uk-margin-remove uk-display-inline-block" action="/console/sessions/logout" method="post">
-                        <button class="uk-button uk-button-link"><a href="#">Logout</a></button>
-                    </form>
-                </li>
-            </ul>
-        </div>
-        
-        <div class="uk-navbar-content"><a href="/" target="_blank">Go to site</a></div>
-    </nav>
+    {{include "layout/_navbar.jet"}}
+    {{yield inlineFragment(section="afterNavBarLine", wrap=false)}}
+    <!--
     <div class="uk-width-medium-1-2 uk-container uk-container-center uk-text-center uk-margin">Example - basic</div>
-
-    <div class="uk-width-1-2 uk-container uk-container-center">
-        {{yield body()}}
-    </div>
-    
-    <footer style="padding: 120px 0;">
-	<div class="uk-container uk-container-center uk-text-center">
-        <ul class="uk-subnav uk-subnav-line uk-flex-center">
-            <li><a href="http://github.com/fader2/platform">GitHub</a></li>
-            <li><a href="http://github.com/fader2/platform/issues">Issues</a></li>
-            <li><a href="mailto:team@fader.site">team@fader.site</a></li>
-        </ul>
-		
-		<div class="uk-panel">
-			<p>Licensed under <a href="http://opensource.org/licenses/MIT">MIT license</a>.</p>
-			<a href="https://ex1.try.fader.site/"><img src="/static/img/logo.png" width="90" height="30" title="Fader" alt="Fader"></a>
-		</div>
-
-        {{yield inlineFragment(section="footer")}}
-	</div>
-</footer>
+    -->
+    {{yield body()}}
+    {{include "layout/_footer.jet"}}
 </body>
 </html>

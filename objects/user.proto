@@ -11,6 +11,8 @@ option (gogoproto.goproto_getters_all) = true;
 message UserPasport {
     string email = 1;
     repeated string access = 2;
+    string pwd = 3;
+    string user_name = 4;
 }
 
 message UserProfile {

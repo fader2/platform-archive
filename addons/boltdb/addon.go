@@ -100,7 +100,7 @@ func (a *Addon) AssetsLoader() jet.Loader {
 }
 
 var exports = map[string]lua.LGFunction{
-	"Init": func(L *lua.LState) int {
+	"init": func(L *lua.LState) int {
 		log.Println("lua: " + NAME + " Init")
 		f, err := templates.Assets.Open(
 			NAME + "/bootstrap.lua",
@@ -122,7 +122,7 @@ var exports = map[string]lua.LGFunction{
 
 		return 0
 	},
-	"Opens": func(L *lua.LState) int {
+	"opens": func(L *lua.LState) int {
 		log.Println("lua: " + NAME + " Opens")
 
 		lv := L.CheckAny(1)
@@ -160,7 +160,7 @@ var exports = map[string]lua.LGFunction{
 		}
 		return 0
 	},
-	"Bucket": func(L *lua.LState) int {
+	"bucket": func(L *lua.LState) int {
 		name := L.CheckString(1)
 		Instance.DatabasesMutex.Lock()
 		db, exists := Instance.Databases[name]

@@ -22,7 +22,7 @@ EOF
 
 	cat > $ADDONPATH/views/addons.${NAME}___bootstrap.lua << EOF
 print("bootstrap $NAME")
-cfg():Set("$NAME", "init OK")
+cfg:set("$NAME", "init OK")
 EOF
 
 	cat > $ADDONPATH/assets/generate.go << EOF
@@ -119,7 +119,7 @@ func (a *Addon) AssetsLoader() jet.Loader {
 }
 
 var exports = map[string]lua.LGFunction{
-	"Init": func(L *lua.LState) int {
+	"init": func(L *lua.LState) int {
 		f, err := templates.Assets.Open(
 			NAME + "/bootstrap.lua",
 		)

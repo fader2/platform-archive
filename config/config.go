@@ -72,27 +72,32 @@ func IsMaintenance() bool {
 
 const luaCfgTypeName = "cfg"
 
-func LuaSetCfg(L *lua.LState, c *Config) {
-	L.SetGlobal("cfg", L.NewFunction(LuaCfgFromCfg(c)))
+func RegisterConfigType(L *lua.LState, c *Config) {
 	mt := L.NewTypeMetatable(luaCfgTypeName)
 	L.SetField(mt, "__index", L.SetFuncs(L.NewTable(), luaCfgMethods))
+
+	L.SetGlobal("cfg", NewConfigLuaValue(L, c))
 	return
 }
 
-// LuaSetReadOnlyCfg set a global new type object. Config read only
-func LuaSetReadOnlyCfg(L *lua.LState, c *Config) {
-	L.SetGlobal("cfg", L.NewFunction(LuaCfgFromCfg(c)))
+func RegisterReadOnlyConfigType(L *lua.LState, c *Config) {
 	mt := L.NewTypeMetatable(luaCfgTypeName)
 	L.SetField(mt, "__index", L.SetFuncs(L.NewTable(), luaCfgReadOnlyMethods))
+
+	L.SetGlobal("cfg", NewConfigLuaValue(L, c))
 	return
 }
 
-func LuaCfgFromCfg(cfg *Config) func(L *lua.LState) int {
-	return func(L *lua.LState) int {
-		ud := L.NewUserData()
-		ud.Value = cfg
+func NewConfigLuaValue(L *lua.LState, c *Config) lua.LValue {
+	ud := L.NewUserData()
+	ud.Value = c
+	L.SetMetatable(ud, L.GetTypeMetatable(luaCfgTypeName))
+	return ud
+}
 
-		L.SetMetatable(ud, L.GetTypeMetatable(luaCfgTypeName))
+func LuaCfgFromCfg(c *Config) func(L *lua.LState) int {
+	return func(L *lua.LState) int {
+		ud := NewConfigLuaValue(L, c)
 		L.Push(ud)
 		return 1
 	}
@@ -111,18 +116,18 @@ func LuaCheckCfg(L *lua.LState) *Config {
 }
 
 var luaCfgReadOnlyMethods = map[string]lua.LGFunction{
-	"Dev": func(L *lua.LState) int {
+	"dev": func(L *lua.LState) int {
 		cfg := LuaCheckCfg(L)
 		L.Push(lua.LBool(cfg.Dev))
 		return 1
 	},
-	"Get": luaCfg_GetVar,
-	"Workspace": func(L *lua.LState) int {
+	"get": luaCfg_GetVar,
+	"workspace": func(L *lua.LState) int {
 		cfg := LuaCheckCfg(L)
 		L.Push(lua.LString(cfg.Workspace))
 		return 1
 	},
-	"DumpVars": func(L *lua.LState) int {
+	"dumpVars": func(L *lua.LState) int {
 		cfg := LuaCheckCfg(L)
 		log.Println("========================")
 		log.Println("DUMP VARS FROM CONFIG")
@@ -135,8 +140,8 @@ var luaCfgReadOnlyMethods = map[string]lua.LGFunction{
 }
 
 var luaCfgMethods = map[string]lua.LGFunction{
-	"Get": luaCfg_GetVar,
-	"Set": luaCfg_SetVar,
+	"get": luaCfg_GetVar,
+	"set": luaCfg_SetVar,
 	/*
 		AddRoute добавить роут
 		- method
@@ -144,26 +149,26 @@ var luaCfgMethods = map[string]lua.LGFunction{
 		- handler
 		- middlewares
 	*/
-	"AddRoute": func(L *lua.LState) int {
+	"addRoute": func(L *lua.LState) int {
 		cfg := LuaCheckCfg(L)
 
 		cfg.Routs = append(cfg.Routs, luaCfg_RouteFromLuaFn(L))
 
 		return 0
 	},
-	"Dev": func(L *lua.LState) int {
+	"dev": func(L *lua.LState) int {
 		cfg := LuaCheckCfg(L)
 		cfg.Dev = L.CheckBool(2)
 		return 0
 	},
-	"NotFoundPage": func(L *lua.LState) int {
+	"notFoundPage": func(L *lua.LState) int {
 		cfg := LuaCheckCfg(L)
 
 		cfg.NotFoundPage = luaCfg_RouteFromLuaFn(L)
 
 		return 0
 	},
-	"ForbiddenPage": func(L *lua.LState) int {
+	"forbiddenPage": func(L *lua.LState) int {
 		cfg := LuaCheckCfg(L)
 
 		cfg.ForbiddenPage = luaCfg_RouteFromLuaFn(L)

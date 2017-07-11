@@ -46,7 +46,7 @@ func (a *Addon) AssetsLoader() jet.Loader {
 }
 
 var exports = map[string]lua.LGFunction{
-	"Init": func(L *lua.LState) int {
+	"init": func(L *lua.LState) int {
 		f, err := templates.Assets.Open(
 			NAME + "/bootstrap.lua",
 		)

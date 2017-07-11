@@ -1,14 +1,14 @@
 local boltdb = require("boltdb")
-local store = boltdb.Bucket(TPL_FRAGMENTS_BUCKET_NAME)
+local store = boltdb.bucket(TPL_FRAGMENTS_BUCKET_NAME)
 
-if ctx():IsPost() then
-    local newData = ctx():FormValue("data")
-    local fragmentID = ctx():FormValue("fragmentID")
-    store:Set(fragmentID, newData)
-    ctx():Redirect("/console/tpls/fragments/"..fragmentID.."/edit")
+if ctx:isPost() then
+    local newData = ctx:formValue("data")
+    local fragmentID = ctx:formValue("fragmentID")
+    store:set(fragmentID, newData)
+    ctx:redirect("/console/tpls/fragments/"..fragmentID.."/edit")
     do return end
 end
 
-local data = store:Get(ctx():Get("fragmentID"))
-ctx():Set("Data", data) 
-ctx():Set("NotExists", data == nil)
+local data = store:get(ctx:get("fragmentID"))
+ctx:set("Data", data) 
+ctx:set("NotExists", data == nil)

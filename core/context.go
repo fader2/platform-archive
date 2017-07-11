@@ -12,7 +12,6 @@ import (
 	"github.com/fader2/platform/consts"
 	"github.com/fader2/platform/objects"
 	"github.com/fader2/platform/utils"
-	uuid "github.com/satori/go.uuid"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -41,6 +40,8 @@ type Context struct {
 	Err            error // in lua script was error
 	ResponseStatus int   // in lua script set response status
 
+	SessionUser *objects.User // session user
+
 	Abort               bool // in lua script was executed render
 	AbortFromMiddleware bool // in lua script set was abort
 }
@@ -58,66 +59,19 @@ func (c *Context) Blob(code int, contentType string, b []byte) (err error) {
 
 const luaCtxTypeName = "ctx"
 
-func luaAddCustomTypeContextAndHelpers(L *lua.LState, c *Context) {
-	L.SetGlobal("ctx", L.NewFunction(luaCtxBuilder(c)))
-	L.SetGlobal("GenToken", L.NewFunction(func(L *lua.LState) int {
-		id, err := uuid.FromString(L.CheckString(1))
-		if err != nil {
-			L.RaiseError("invalid ID", err)
-			return 0
-		}
-		token, err := GenerateToken(id)
-		if err != nil {
-			L.RaiseError("invalid token", err)
-			return 0
-		}
-
-		L.Push(lua.LString(token))
-		return 1
-	}))
-	L.SetGlobal("Auth", L.NewFunction(
-		func(L *lua.LState) int {
-			ls := L.CheckUserData(1)
-			s, ok := ls.Value.(objects.Storer)
-			if !ok {
-				L.RaiseError("expected objects.Storer, got %T", ls.Value)
-				return 0
-			}
-			token := L.CheckString(2)
-			usr, err := Authenticate(token, s)
-
-			if err == consts.ErrNotFound {
-				return luaUserBuilder(&luaUser{
-					User:   objects.EmptyUser(objects.UnknownUserType),
-					Exists: false,
-				})(L)
-			}
-			if err != nil {
-				L.RaiseError("auth user by token", err)
-				return 0
-			}
-
-			return luaUserBuilder(&luaUser{
-				User:   usr,
-				Exists: true,
-			})(L)
-		},
-	))
-
+func registerContextType(L *lua.LState, c *Context) {
 	mt := L.NewTypeMetatable(luaCtxTypeName)
 	L.SetField(mt, "__index", L.SetFuncs(L.NewTable(), luaCtxMethods))
+
+	L.SetGlobal("ctx", newContextLuaValue(c, L))
 	return
 }
 
-func luaCtxBuilder(ctx *Context) func(L *lua.LState) int {
-	return func(L *lua.LState) int {
-		ud := L.NewUserData()
-		ud.Value = ctx
-
-		L.SetMetatable(ud, L.GetTypeMetatable(luaCtxTypeName))
-		L.Push(ud)
-		return 1
-	}
+func newContextLuaValue(ctx *Context, L *lua.LState) lua.LValue {
+	ud := L.NewUserData()
+	ud.Value = ctx
+	L.SetMetatable(ud, L.GetTypeMetatable(luaCtxTypeName))
+	return ud
 }
 
 func luaCheckCtx(L *lua.LState) *Context {
@@ -131,7 +85,7 @@ func luaCheckCtx(L *lua.LState) *Context {
 }
 
 var luaCtxMethods = map[string]lua.LGFunction{
-	"Set": func(L *lua.LState) int {
+	"set": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		k := L.CheckString(2)
 		lv := L.CheckAny(3)
@@ -139,7 +93,7 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		ctx.Vars.Set(k, v)
 		return 0
 	},
-	"Get": func(L *lua.LState) int {
+	"get": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		k := L.CheckString(2)
 		v := ctx.Vars[k]
@@ -147,28 +101,48 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		L.Push(lv)
 		return 1
 	},
-	"QueryParam": func(L *lua.LState) int {
+	"session": func(L *lua.LState) int {
+		ctx := luaCheckCtx(L)
+		if L.GetTop() == 2 {
+			u := luaCheckUser(L, 2)
+			ctx.SessionUser = u.User
+			return 0
+		}
+
+		if ctx.SessionUser == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		ud := L.NewUserData()
+		ud.Value = &user{ctx.SessionUser}
+		L.SetMetatable(ud, L.GetTypeMetatable(luaUserTypeName))
+		L.Push(ud)
+		return 1
+	},
+
+	"queryParam": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		key := L.CheckString(2)
 		L.Push(lua.LString(ctx.r.URL.Query().Get(key)))
 		return 1
 	},
-	"FormValue": func(L *lua.LState) int {
+	"formValue": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		key := L.CheckString(2)
 		L.Push(lua.LString(ctx.r.FormValue(key)))
 		return 1
 	},
-	"FormFile": func(L *lua.LState) int {
+	"formFile": func(L *lua.LState) int {
 		log.Println("FormFile not implemented")
 		return 0
 	},
-	"Path": func(L *lua.LState) int {
+	"path": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		L.Push(lua.LString(ctx.r.URL.Path))
 		return 1
 	},
-	"CookieValue": func(L *lua.LState) int {
+	"cookieValue": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		k := L.CheckString(2)
 		ck, err := ctx.r.Cookie(k)
@@ -180,7 +154,7 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		L.Push(lua.LString(ck.Value))
 		return 1
 	},
-	"DumpVars": func(L *lua.LState) int {
+	"dumpVars": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		log.Println("========================")
 		log.Println("DUMP VARS FROM CONTEXT")
@@ -190,7 +164,7 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		log.Println("========================")
 		return 0
 	},
-	"SetCookie": func(L *lua.LState) int {
+	"setCookie": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		k := L.CheckString(2)
 		v := L.CheckString(3)
@@ -208,7 +182,7 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		})
 		return 0
 	},
-	"DelCookie": func(L *lua.LState) int {
+	"delCookie": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		k := L.CheckString(2) // cookie name
 
@@ -223,12 +197,12 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		})
 		return 0
 	},
-	"Status": func(L *lua.LState) int {
+	"status": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		ctx.ResponseStatus = L.CheckInt(2)
 		return 0
 	},
-	"NoContent": func(L *lua.LState) int {
+	"noContent": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		ctx.Abort = true
 		ctx.AbortFromMiddleware = true
@@ -236,7 +210,7 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		ctx.w.WriteHeader(L.CheckInt(2))
 		return 0
 	},
-	"Redirect": func(L *lua.LState) int {
+	"redirect": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		ctx.Abort = true
 		ctx.AbortFromMiddleware = true
@@ -245,7 +219,7 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		ctx.w.WriteHeader(http.StatusFound)
 		return 0
 	},
-	"JSON": func(L *lua.LState) int {
+	"json": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		ctx.Abort = true
 		ctx.AbortFromMiddleware = true
@@ -267,7 +241,7 @@ var luaCtxMethods = map[string]lua.LGFunction{
 
 		return 0
 	},
-	"Blob": func(L *lua.LState) int {
+	"blob": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		ctx.Abort = true
 		ctx.AbortFromMiddleware = true
@@ -298,17 +272,17 @@ var luaCtxMethods = map[string]lua.LGFunction{
 		return 0
 	},
 
-	"IsPost": func(L *lua.LState) int {
+	"isPost": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		L.Push(lua.LBool(ctx.r.Method == http.MethodPost))
 		return 1
 	},
-	"IsGet": func(L *lua.LState) int {
+	"isGet": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		L.Push(lua.LBool(ctx.r.Method == http.MethodGet))
 		return 1
 	},
-	"IsDelete": func(L *lua.LState) int {
+	"isDelete": func(L *lua.LState) int {
 		ctx := luaCheckCtx(L)
 		L.Push(lua.LBool(ctx.r.Method == http.MethodDelete))
 		return 1

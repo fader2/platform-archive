@@ -1,8 +1,10 @@
 package boltdb
 
 import (
+	"github.com/boltdb/bolt"
 	"github.com/fader2/platform/objects"
 	"github.com/fader2/platform/utils"
+	uuid "github.com/satori/go.uuid"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -40,28 +42,33 @@ func checkLuaBoltdb(L *lua.LState) *luaBoltdb {
 }
 
 var luaBoltdbMethods = map[string]lua.LGFunction{
-	"Set": func(L *lua.LState) int {
-		store := checkLuaBoltdb(L)
-
+	"set": luaUpsertObject(),
+	"setRefID": func(L *lua.LState) int {
+		s := checkLuaBoltdb(L)
 		name := L.CheckString(2)
-		lv := L.CheckAny(3)
-		v := utils.ToValueFromLValue(lv)
+		lv := L.CheckUserData(3)
+		var id uuid.UUID
+		switch v := lv.Value.(type) {
+		case string:
+			id = uuid.FromStringOrNil(v)
+		case uuid.UUID:
+			id = v
+		default:
+			L.RaiseError("unsupported type %T", v)
+		}
 
-		b := objects.EmptyBlob()
-		b.SetIDFromName(name)
-		b.SetDataFromValue(v)
-		b.SetOrigName(name)
-
-		id, err := objects.SetBlob(store, b)
+		err := s.db.Update(func(tx *bolt.Tx) error {
+			return tx.Bucket([]byte(s.bucket)).
+				Put(utils.SHA256(name), id.Bytes())
+		})
 		if err != nil {
-			L.RaiseError("error save object", err)
+			L.RaiseError("save ref %s", err)
 			return 0
 		}
 
-		L.Push(lua.LString(id.String()))
-		return 1
+		return 0
 	},
-	"Get": func(L *lua.LState) int {
+	"get": func(L *lua.LState) int {
 		store := checkLuaBoltdb(L)
 		name := L.CheckString(2)
 		id := objects.UUIDFromString(name)
@@ -74,5 +81,76 @@ var luaBoltdbMethods = map[string]lua.LGFunction{
 
 		return b.PushDataToLState(L)
 	},
-	"Del": func(L *lua.LState) int { return 0 },
+	"getRefID": func(L *lua.LState) int {
+		s := checkLuaBoltdb(L)
+		name := L.CheckString(2)
+		var idRaw []byte
+		err := s.db.View(func(tx *bolt.Tx) error {
+			idRaw = tx.Bucket([]byte(s.bucket)).
+				Get(utils.SHA256(name))
+			return nil
+		})
+		if err != nil {
+			L.RaiseError("save ref %s", err)
+			return 0
+		}
+
+		L.Push(lua.LString(uuid.FromBytesOrNil(idRaw).String()))
+		return 1
+	},
+	"del": func(L *lua.LState) int {
+		s := checkLuaBoltdb(L)
+		name := L.CheckString(2)
+		id := objects.UUIDFromString(name)
+		s.db.Update(func(tx *bolt.Tx) error {
+			return tx.Bucket([]byte(s.bucket)).Delete(id.Bytes())
+		})
+		return 0
+	},
+	"delRefID": func(L *lua.LState) int {
+		s := checkLuaBoltdb(L)
+		name := L.CheckString(2)
+		s.db.Update(func(tx *bolt.Tx) error {
+			return tx.Bucket([]byte(s.bucket)).Delete(utils.SHA256(name))
+		})
+		return 0
+	},
+}
+
+func luaUpsertObject() func(L *lua.LState) int {
+	return func(L *lua.LState) int {
+		s := checkLuaBoltdb(L)
+
+		name := L.CheckString(2)
+		lv := L.CheckAny(3)
+		v := utils.ToValueFromLValue(lv)
+
+		id, err := upsertObject(s.BoltdbStorage, name, v)
+		if err != nil {
+			L.RaiseError("error save object", err)
+			return 0
+		}
+
+		L.Push(lua.LString(id.String()))
+		return 1
+	}
+}
+
+func upsertObject(
+	s *BoltdbStorage,
+	name string,
+	v interface{},
+) (uuid.UUID, error) {
+
+	b := objects.EmptyBlob()
+	b.SetIDFromName(name)
+	b.SetDataFromValue(v)
+	b.SetOrigName(name)
+
+	id, err := objects.SetBlob(s, b)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return id, nil
 }

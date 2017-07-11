@@ -142,7 +142,7 @@ func loadSetting() {
 	// execute app.lua file
 	L := lua.NewState()
 	defer L.Close()
-	config.LuaSetCfg(L, config.AppConfig)
+	config.RegisterConfigType(L, config.AppConfig)
 	consts.SetupToLua(L)
 	consts.SetupDefValues(config.AppConfig)
 
@@ -159,7 +159,7 @@ func loadSetting() {
 
 	addons.PreloadLuaModules(L)
 	if err = L.DoString(_data.String()); err != nil {
-		log.Fatal("init settings (from lua):", err)
+		log.Fatalf("init settings (from %q): %s", appLuaFileName, err)
 		return
 	}
 

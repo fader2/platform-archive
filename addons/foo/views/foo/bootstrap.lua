@@ -1,2 +1,2 @@
 print("bootstrap foo")
-cfg():Set("foo", "init OK")
+cfg:set("foo", "init OK")

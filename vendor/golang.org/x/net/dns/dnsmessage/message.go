@@ -280,6 +280,9 @@ type ResourceBody interface {
 }
 
 func (r *Resource) pack(msg []byte, compression map[string]int) ([]byte, error) {
+	if r.Body == nil {
+		return msg, &nestedError{"Resource", errors.New("nil resource body")}
+	}
 	oldMsg := msg
 	r.Header.Type = r.Body.realType()
 	msg, length, err := r.Header.pack(msg, compression)
@@ -1209,7 +1212,7 @@ func (b *Builder) Finish() ([]byte, error) {
 	return b.msg, nil
 }
 
-// An ResourceHeader is the header of a DNS resource record. There are
+// A ResourceHeader is the header of a DNS resource record. There are
 // many types of DNS resource records, but they all share the same header.
 type ResourceHeader struct {
 	// Name is the domain name for which this resource record pertains.
