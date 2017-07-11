@@ -6,8 +6,8 @@ local tpls = require("tpls")
 
 print(cfg:get("foo"))
 -- cfg():Dev(true)
-cfg:addRoute("GET", "/", "pages/index.jet", {"_all.lua", "pages/index.lua"})
-cfg:addRoute("GET", "/signin", "pages/login.jet", {"_all.lua"})
+cfg:addRoute("GET", "/", "pages/index.jet", {"any.lua", "pages/index.lua"})
+cfg:addRoute("GET", "/signin", "pages/login.jet", {"any.lua"})
 
 -- settings cookies
 cfg:set(COOKIE_SECURE, false)
